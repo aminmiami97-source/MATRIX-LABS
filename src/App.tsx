@@ -355,27 +355,59 @@ function App() {
 
   function settingsPage() {
     return <>
-      {heading("PREFERENCES", "Workspace settings.", "Local preview settings and future connection options.")}
+      {heading("PREFERENCES", "Connect your AI.", "Choose a provider for your agents. Your API key is saved in Windows Credential Manager.")}
       <div className="settings-grid">
-        <section className="panel settings-panel"><div className="panel-head"><div><div className="eyebrow">AI CONNECTION</div><h3>Provider setup</h3></div><span className="coming-tag">COMING LATER</span></div><div className="settings-empty"><div className="empty-icon"><Sparkles size={22} /></div><h4>No AI provider connected</h4><p>Provider setup will use secure Windows credential storage. This preview does not accept or store API keys.</p></div></section>
-        <section className="panel settings-panel"><div className="panel-head"><div><div className="eyebrow">LOCAL DATA</div><h3>Your workspace data</h3></div><span className="local-tag">ON THIS DEVICE</span></div><div className="setting-row"><div><strong>Agent profiles</strong><span>Saved in this app's local web storage.</span></div><CheckCircle2 /></div><div className="setting-row"><div><strong>Chat preview</strong><span>Messages are stored locally in this preview.</span></div><CheckCircle2 /></div><div className="setting-row"><div><strong>Windows credentials</strong><span>Not enabled in this milestone.</span></div><LockKeyhole /></div></section>
+        <section className="panel settings-panel provider-panel">
+          <div className="panel-head"><div><div className="eyebrow">AI CONNECTION</div><h3>Provider setup</h3></div><span className={providerKeys[provider] ? "connected-tag" : "coming-tag"}>{providerKeys[provider] ? "CONNECTED" : "NOT CONNECTED"}</span></div>
+          <form className="provider-form" onSubmit={saveProviderKey}>
+            <label htmlFor="provider-choice">AI provider</label>
+            <select id="provider-choice" className="field" value={provider} onChange={(event) => chooseProvider(event.target.value as ProviderId)}>
+              <option value="gemini">Google Gemini</option>
+              <option value="openai">OpenAI</option>
+            </select>
+            <label htmlFor="provider-model">Model ID</label>
+            <input id="provider-model" className="field" value={model} onChange={(event) => setModel(event.target.value)} maxLength={80} spellCheck={false} placeholder={provider === "gemini" ? "gemini-3.8-flash" : "gpt-6-luna"} />
+            <label htmlFor="provider-key">API key</label>
+            <input id="provider-key" className="field" type="password" value={providerKeyInput} onChange={(event) => setProviderKeyInput(event.target.value)} autoComplete="off" spellCheck={false} placeholder={providerKeys[provider] ? "A key is already saved. Enter a new key to replace it." : "Paste your provider API key"} />
+            <div className="provider-key-note"><LockKeyhole size={14} /><span>The key is sent to the native Rust app and saved in Windows Credential Manager. It is not saved in localStorage or GitHub.</span></div>
+            {providerError && <div className="provider-alert error-alert">{providerError}</div>}
+            {providerMessage && <div className="provider-alert success-alert">{providerMessage}</div>}
+            <div className="provider-actions">
+              <button type="submit" className="button primary" disabled={providerBusy || !providerKeyInput.trim() || !bridgeAvailable}>{providerBusy ? "Saving…" : providerKeys[provider] ? "Replace API key" : "Save API key"}</button>
+              {providerKeys[provider] && <button type="button" className="button quiet" onClick={removeProviderKey} disabled={providerBusy}>Remove key</button>}
+            </div>
+          </form>
+        </section>
+        <section className="panel settings-panel">
+          <div className="panel-head"><div><div className="eyebrow">LOCAL DATA</div><h3>Your workspace data</h3></div><span className="local-tag">ON THIS DEVICE</span></div>
+          <div className="setting-row"><div><strong>Agent profiles</strong><span>Saved in this app's local web storage.</span></div><CheckCircle2 /></div>
+          <div className="setting-row"><div><strong>Conversation history</strong><span>Stored locally by this app.</span></div><CheckCircle2 /></div>
+          <div className="setting-row"><div><strong>Provider credentials</strong><span>Stored by Windows Credential Manager.</span></div><ShieldCheck /></div>
+          <div className="settings-footnote">The selected provider receives the agent instructions and recent messages when you send a chat. Do not send passwords or other sensitive information.</div>
+        </section>
       </div>
-      <div className="notice"><ShieldCheck size={17} /><span><strong>Never paste secrets into this preview.</strong> Secure provider configuration will be built into the native application layer.</span></div>
+      <div className="notice"><ShieldCheck size={17} /><span><strong>AI usage is separate from MATRIX Credits.</strong> Your provider may apply its own usage limits or charges. Check the provider's account settings before connecting a key.</span></div>
     </>;
   }
 
   function chatPage() {
     if (!activeAgent) return <>{heading("AGENT CHAT", "Start a conversation.", "Create an agent before opening its chat.", createButton)}<div className="large-empty panel"><div className="empty-icon big"><MessageCircle size={27} /></div><h3>Your next conversation starts here.</h3><p>Create an agent and it will appear in your workshop.</p>{createButton}</div></>;
+    const connected = providerKeys[provider];
+    const providerName = provider === "gemini" ? "Gemini" : "OpenAI";
     return <>
-      {heading("AGENT SPACE", activeAgent.name, "A private conversation preview for this agent.")}
+      {heading("AGENT SPACE", activeAgent.name, "A private conversation with your configured AI provider.")}
       <div className="chat-layout">
         <section className="chat-panel panel">
-          <div className="chat-header"><div className="avatar">{initials(activeAgent.name)}</div><div className="chat-agent-title"><strong>{activeAgent.name}</strong><span>{activeAgent.personality}</span></div><span className="preview-tag">LOCAL PREVIEW</span></div>
-          <div className="chat-messages">{chatMessages.length === 0 ? <div className="chat-welcome"><div className="avatar welcome-avatar">{initials(activeAgent.name)}</div><h3>Hi, I'm {activeAgent.name}.</h3><p>{activeAgent.purpose}</p><span>This is a local interface preview. AI responses are not connected yet.</span></div> : chatMessages.map((message) => <div className={message.role === "user" ? "message-row user-message" : "message-row agent-message"} key={message.id}>{message.role === "agent" && <div className="message-avatar">{initials(activeAgent.name)}</div>}<div className="bubble"><span>{message.role === "user" ? "YOU" : activeAgent.name.toUpperCase()}</span><p>{message.content}</p></div></div>)}</div>
-          <form className="composer" onSubmit={sendMessage}><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Write a message — saved locally in preview…" aria-label="Message" /><button type="button" className="voice-button" disabled title="Voice conversations are planned later"><Mic size={17} /></button><button type="submit" className="send-button" disabled={!draft.trim()} aria-label="Send preview message"><Send size={17} /></button></form>
-          <div className="chat-footnote"><LockKeyhole size={12} /> Preview only · No AI provider or laptop access is connected</div>
+          <div className="chat-header"><div className="avatar">{initials(activeAgent.name)}</div><div className="chat-agent-title"><strong>{activeAgent.name}</strong><span>{activeAgent.personality}</span></div><span className={connected ? "connected-tag" : "preview-tag"}>{connected ? "AI CONNECTED" : "SETUP REQUIRED"}</span></div>
+          <div className="chat-messages">
+            {chatMessages.length === 0 ? <div className="chat-welcome"><div className="avatar welcome-avatar">{initials(activeAgent.name)}</div><h3>Hi, I'm {activeAgent.name}.</h3><p>{activeAgent.purpose}</p><span>{connected ? "Your " + providerName + " connection is ready. Send a message to begin." : "Connect Gemini or OpenAI in Settings to start a real AI conversation."}</span></div> : chatMessages.map((message) => <div className={message.role === "user" ? "message-row user-message" : "message-row agent-message"} key={message.id}>{message.role !== "user" && <div className="message-avatar">{initials(activeAgent.name)}</div>}<div className="bubble"><span>{message.role === "user" ? "YOU" : activeAgent.name.toUpperCase()}</span><p>{message.content}</p></div></div>)}
+            {isSending && <div className="typing-row"><div className="message-avatar">{initials(activeAgent.name)}</div><span>{activeAgent.name} is thinking…</span></div>}
+          </div>
+          {chatError && <div className="chat-error">{chatError}</div>}
+          <form className="composer" onSubmit={sendMessage}><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={connected ? "Message " + activeAgent.name + "…" : "Connect a provider in Settings first…"} aria-label="Message" /><button type="button" className="voice-button" disabled title="Voice conversations are planned for a later version"><Mic size={17} /></button><button type="submit" className="send-button" disabled={!draft.trim() || isSending || !connected} aria-label="Send message"><Send size={17} /></button></form>
+          <div className="chat-footnote"><LockKeyhole size={12} /> {connected ? "Recent messages are sent securely to " + providerName + " for responses. Device permissions remain off." : "No AI provider connected. Your existing chat history remains on this device."}</div>
         </section>
-        <aside className="agent-info panel"><div className="eyebrow">AGENT PROFILE</div><div className="avatar profile-avatar">{initials(activeAgent.name)}</div><h3>{activeAgent.name}</h3><span className="personality-tag">{activeAgent.personality}</span><div className="info-divider" /><div className="eyebrow">PURPOSE</div><p>{activeAgent.purpose}</p><div className="info-divider" /><div className="permission-mini"><ShieldCheck size={16} /><span><strong>Permissions off</strong><small>This agent has no access to your device.</small></span></div></aside>
+        <aside className="agent-info panel"><div className="eyebrow">AGENT PROFILE</div><div className="avatar profile-avatar">{initials(activeAgent.name)}</div><h3>{activeAgent.name}</h3><span className="personality-tag">{activeAgent.personality}</span><div className="info-divider" /><div className="eyebrow">PURPOSE</div><p>{activeAgent.purpose}</p><div className="info-divider" /><div className="permission-mini"><ShieldCheck size={16} /><span><strong>Device permissions off</strong><small>This agent can chat, but cannot access files, email, or Windows controls.</small></span></div></aside>
       </div>
     </>;
   }
@@ -389,10 +421,10 @@ function App() {
       {activeAgent && <><div className="nav-label agent-label">YOUR AGENTS</div><button className={page === "chat" ? "agent-nav active" : "agent-nav"} onClick={() => { setSelectedId(activeAgent.id); setPage("chat"); }}><div className="tiny-avatar">{initials(activeAgent.name)}</div><span>{activeAgent.name}</span><i /></button></>}
       <div className="sidebar-spacer" />
       <div className="credit-box"><div><span>MATRIX CREDITS</span><Coins size={15} /></div><strong>{credits.toLocaleString()} <small>CR</small></strong><footer><span>Earned through tasks</span><button onClick={() => go("tasks")}>View tasks <ArrowUpRight size={12} /></button></footer></div>
-      <div className="sidebar-profile"><div className="profile-circle">A</div><div><strong>Local profile</strong><span>Preview build · v0.1.0</span></div><button onClick={() => go("settings")} title="Settings"><Settings2 size={16} /></button></div>
+      <div className="sidebar-profile"><div className="profile-circle">A</div><div><strong>Local profile</strong><span>Preview build · v0.2.0</span></div><button onClick={() => go("settings")} title="Settings"><Settings2 size={16} /></button></div>
     </aside>
     <main className="main-area">
-      <header className="topbar"><div className="breadcrumbs"><span>Workspace</span><ChevronRight size={14} /><strong>{titles[page]}</strong></div><div className="topbar-actions"><div className="local-mode"><i /> LOCAL MODE</div><button className="top-credits" onClick={() => go("tasks")}><Coins size={15} /><strong>{credits}</strong><span>credits</span></button></div></header>
+      <header className="topbar"><div className="breadcrumbs"><span>Workspace</span><ChevronRight size={14} /><strong>{titles[page]}</strong></div><div className="topbar-actions"><div className="local-mode"><i /> DEVICE ACCESS OFF</div><button className="top-credits" onClick={() => go("tasks")}><Coins size={15} /><strong>{credits}</strong><span>credits</span></button></div></header>
       <div className={page === "chat" ? "page-content chat-content" : "page-content"}>
         {page === "overview" && overview()}
         {page === "agents" && agentsPage()}
@@ -400,7 +432,7 @@ function App() {
         {page === "permissions" && permissionsPage()}
         {page === "settings" && settingsPage()}
         {page === "chat" && chatPage()}
-        <footer className="page-footer"><span>MATRIX LABS <i>·</i> BUILDING WITH PERMISSION</span><span>PREVIEW 0.1.0</span></footer>
+        <footer className="page-footer"><span>MATRIX LABS <i>·</i> BUILDING WITH PERMISSION</span><span>PREVIEW 0.2.0</span></footer>
       </div>
     </main>
 
