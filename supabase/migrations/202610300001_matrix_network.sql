@@ -68,11 +68,6 @@ create policy "Users can read their own credit ledger"
   on public.credit_ledger for select to authenticated
   using (auth.uid() = user_id);
 
-grant select on public.profiles to authenticated;
-grant select on public.credit_accounts to authenticated;
-grant select on public.credit_ledger to authenticated;
-revoke all on public.matrix_usage_events from anon, authenticated;
-
 create or replace function public.handle_new_matrix_user()
 returns trigger
 language plpgsql
