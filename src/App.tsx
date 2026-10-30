@@ -10,7 +10,6 @@ import {
 type Page = "overview" | "agents" | "tasks" | "permissions" | "settings" | "chat";
 type Agent = { id: string; name: string; purpose: string; personality: string };
 type ChatMessage = { id: string; role: "user" | "assistant" | "agent"; content: string };
-type ProviderId = "gemini" | "openai";
 type MessageStore = Record<string, ChatMessage[]>;
 
 const KEYS = {
@@ -18,7 +17,6 @@ const KEYS = {
   credits: "matrix-labs.credits.v1",
   completed: "matrix-labs.completed-tasks.v1",
   messages: "matrix-labs.messages.v1",
-  provider: "matrix-labs.provider.v1",
   model: "matrix-labs.model.v1"
 };
 
@@ -36,9 +34,8 @@ function initials(name: string) {
 }
 
 const navItems = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "agents", label: "My agents", icon: Users },
-  { id: "tasks", label: "Task board", icon: ListTodo },
+  { id: "chat", label: "Chat", icon: MessageCircle },
+  { id: "agents", label: "Agents", icon: Users },
   { id: "permissions", label: "Permissions", icon: ShieldCheck },
   { id: "settings", label: "Settings", icon: Settings2 }
 ] as const;
@@ -50,7 +47,7 @@ const tasks = [
 ];
 
 function App() {
-  const [page, setPage] = useState<Page>("overview");
+  const [page, setPage] = useState<Page>("chat");
   const [agents, setAgents] = useState<Agent[]>(() => readLocal(KEYS.agents, []));
   const [credits, setCredits] = useState(() => readLocal(KEYS.credits, 0));
   const [completed, setCompleted] = useState<string[]>(() => readLocal(KEYS.completed, []));
@@ -61,13 +58,12 @@ function App() {
   const [purpose, setPurpose] = useState("");
   const [personality, setPersonality] = useState("Calm and helpful");
   const [draft, setDraft] = useState("");
-  const [provider, setProvider] = useState<ProviderId>(() => readLocal(KEYS.provider, "gemini" as ProviderId));
-  const [model, setModel] = useState(() => readLocal(KEYS.model, "gemini-3.8-flash"));
-  const [providerKeys, setProviderKeys] = useState<Record<ProviderId, boolean>>({ gemini: false, openai: false });
-  const [providerKeyInput, setProviderKeyInput] = useState("");
-  const [providerBusy, setProviderBusy] = useState(false);
-  const [providerMessage, setProviderMessage] = useState("");
-  const [providerError, setProviderError] = useState("");
+  const [model, setModel] = useState(() => readLocal(KEYS.model, "openai/gpt-5.2"));
+  const [matrixKeySaved, setMatrixKeySaved] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState("");
+  const [keyBusy, setKeyBusy] = useState(false);
+  const [keyMessage, setKeyMessage] = useState("");
+  const [keyError, setKeyError] = useState("");
   const [bridgeAvailable, setBridgeAvailable] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [chatError, setChatError] = useState("");
@@ -76,25 +72,21 @@ function App() {
   useEffect(() => localStorage.setItem(KEYS.credits, JSON.stringify(credits)), [credits]);
   useEffect(() => localStorage.setItem(KEYS.completed, JSON.stringify(completed)), [completed]);
   useEffect(() => localStorage.setItem(KEYS.messages, JSON.stringify(messages)), [messages]);
-  useEffect(() => localStorage.setItem(KEYS.provider, JSON.stringify(provider)), [provider]);
   useEffect(() => localStorage.setItem(KEYS.model, JSON.stringify(model)), [model]);
 
   useEffect(() => {
     let mounted = true;
     const loadCredentialStatus = async () => {
       try {
-        const [gemini, openai] = await Promise.all([
-          invoke<boolean>("provider_key_status", { provider: "gemini" }),
-          invoke<boolean>("provider_key_status", { provider: "openai" })
-        ]);
+        const saved = await invoke<boolean>("matrix_ai_key_status");
         if (mounted) {
-          setProviderKeys({ gemini, openai });
+          setMatrixKeySaved(saved);
           setBridgeAvailable(true);
         }
       } catch {
         if (mounted) {
           setBridgeAvailable(false);
-          setProviderError("Secure provider storage is available in the installed Windows app. Open the installed MATRIX LABS desktop build.");
+          setKeyError("Secure provider storage is available in the installed Windows app. Open the installed MATRIX LABS desktop build.");
         }
       }
     };
@@ -105,7 +97,7 @@ function App() {
   const activeAgent = agents.find((agent) => agent.id === selectedId) ?? agents[0] ?? null;
   const chatMessages = activeAgent ? messages[activeAgent.id] ?? [] : [];
   const titles: Record<Page, string> = {
-    overview: "Overview", agents: "My agents", tasks: "Task board",
+    overview: "Overview", agents: "Agents", tasks: "MATRIX Credits",
     permissions: "Permissions", settings: "Settings", chat: activeAgent?.name ?? "Agent chat"
   };
 
@@ -148,23 +140,19 @@ function App() {
     event.preventDefault();
     const text = draft.trim();
     if (!text || !activeAgent || isSending) return;
-
-    if (!providerKeys[provider]) {
-      setChatError("Connect an AI provider in Settings before sending messages.");
+    if (!matrixKeySaved) {
+      setChatError("Connect MATRIX AI in Settings before sending messages.");
       setPage("settings");
       return;
     }
-
     const id = Date.now().toString();
     const userMessage: ChatMessage = { id: id + "-u", role: "user", content: text };
     const history = [
-      ...chatMessages.map((message) => ({
-        role: message.role === "agent" ? "assistant" : message.role,
-        content: message.content
-      })),
+      ...chatMessages
+        .filter((message) => !message.content.startsWith("This is the MATRIX LABS local preview."))
+        .map((message) => ({ role: message.role === "agent" ? "assistant" : message.role, content: message.content })),
       { role: "user", content: text }
     ].slice(-24);
-
     const systemPrompt = [
       "You are " + activeAgent.name + ", a personal assistant inside MATRIX LABS.",
       "Personality: " + activeAgent.personality + ".",
@@ -173,7 +161,6 @@ function App() {
       "Never claim to have changed the user's computer, read a file, sent an email, or performed an external action.",
       "If asked to perform a computer action, explain that device capabilities are not connected in this version."
     ].join("\n");
-
     setChatError("");
     setDraft("");
     setMessages((current) => ({
@@ -181,19 +168,13 @@ function App() {
       [activeAgent.id]: [...(current[activeAgent.id] ?? []), userMessage]
     }));
     setIsSending(true);
-
     try {
-      const reply = await invoke<{ content: string; provider: string; model: string }>("send_ai_message", {
-        provider,
+      const reply = await invoke<{ content: string; model: string }>("send_ai_message", {
         model,
         systemPrompt,
         messages: history
       });
-      const assistantMessage: ChatMessage = {
-        id: id + "-a",
-        role: "assistant",
-        content: reply.content
-      };
+      const assistantMessage: ChatMessage = { id: id + "-a", role: "assistant", content: reply.content };
       setMessages((current) => ({
         ...current,
         [activeAgent.id]: [...(current[activeAgent.id] ?? []), assistantMessage]
@@ -205,56 +186,46 @@ function App() {
       setIsSending(false);
     }
   }
-
-  async function saveProviderKey(event: FormEvent<HTMLFormElement>) {
+  async function saveMatrixKey(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const secret = providerKeyInput.trim();
+    const secret = apiKeyInput.trim();
     if (!secret) {
-      setProviderError("Enter an API key first.");
+      setKeyError("Enter an API key first.");
       return;
     }
     if (!bridgeAvailable) {
-      setProviderError("Secure provider storage is unavailable. Use the installed Windows desktop app.");
+      setKeyError("Secure key storage is unavailable. Use the installed Windows desktop app.");
       return;
     }
-    setProviderBusy(true);
-    setProviderError("");
-    setProviderMessage("");
+    setKeyBusy(true);
+    setKeyError("");
+    setKeyMessage("");
     try {
-      await invoke<void>("save_provider_key", { provider, apiKey: secret });
-      setProviderKeys((current) => ({ ...current, [provider]: true }));
-      setProviderKeyInput("");
-      setProviderMessage("Connected. Your API key is stored in Windows Credential Manager, not in browser storage.");
+      await invoke<void>("save_matrix_ai_key", { apiKey: secret });
+      setMatrixKeySaved(true);
+      setApiKeyInput("");
+      setKeyMessage("Connected. Your key is stored in Windows Credential Manager, not in browser storage.");
     } catch (error) {
-      setProviderError(String(error));
+      setKeyError(String(error));
     } finally {
-      setProviderBusy(false);
+      setKeyBusy(false);
     }
   }
 
-  async function removeProviderKey() {
-    setProviderBusy(true);
-    setProviderError("");
-    setProviderMessage("");
+  async function removeMatrixKey() {
+    setKeyBusy(true);
+    setKeyError("");
+    setKeyMessage("");
     try {
-      await invoke<void>("delete_provider_key", { provider });
-      setProviderKeys((current) => ({ ...current, [provider]: false }));
-      setProviderMessage("The saved provider key was removed from Windows Credential Manager.");
+      await invoke<void>("delete_matrix_ai_key");
+      setMatrixKeySaved(false);
+      setKeyMessage("The saved key was removed from Windows Credential Manager.");
     } catch (error) {
-      setProviderError(String(error));
+      setKeyError(String(error));
     } finally {
-      setProviderBusy(false);
+      setKeyBusy(false);
     }
   }
-
-  function chooseProvider(nextProvider: ProviderId) {
-    setProvider(nextProvider);
-    setModel(nextProvider === "gemini" ? "gemini-3.8-flash" : "gpt-6-luna");
-    setProviderKeyInput("");
-    setProviderMessage("");
-    setProviderError("");
-  }
-
   function removeAgent(id: string) {
     const next = agents.filter((agent) => agent.id !== id);
     setAgents(next);
@@ -355,73 +326,80 @@ function App() {
 
   function settingsPage() {
     return <>
-      {heading("PREFERENCES", "Connect your AI.", "Choose a provider for your agents. Your API key is saved in Windows Credential Manager.")}
+      {heading("MATRIX AI", "One connection. Your agents.", "Connect the intelligence layer that powers conversations across your workspace.")}
       <div className="settings-grid">
         <section className="panel settings-panel provider-panel">
-          <div className="panel-head"><div><div className="eyebrow">AI CONNECTION</div><h3>Provider setup</h3></div><span className={providerKeys[provider] ? "connected-tag" : "coming-tag"}>{providerKeys[provider] ? "CONNECTED" : "NOT CONNECTED"}</span></div>
-          <form className="provider-form" onSubmit={saveProviderKey}>
-            <label htmlFor="provider-choice">AI provider</label>
-            <select id="provider-choice" className="field" value={provider} onChange={(event) => chooseProvider(event.target.value as ProviderId)}>
-              <option value="gemini">Google Gemini</option>
-              <option value="openai">OpenAI</option>
-            </select>
-            <label htmlFor="provider-model">Model ID</label>
-            <input id="provider-model" className="field" value={model} onChange={(event) => setModel(event.target.value)} maxLength={80} spellCheck={false} placeholder={provider === "gemini" ? "gemini-3.8-flash" : "gpt-6-luna"} />
-            <label htmlFor="provider-key">API key</label>
-            <input id="provider-key" className="field" type="password" value={providerKeyInput} onChange={(event) => setProviderKeyInput(event.target.value)} autoComplete="off" spellCheck={false} placeholder={providerKeys[provider] ? "A key is already saved. Enter a new key to replace it." : "Paste your provider API key"} />
-            <div className="provider-key-note"><LockKeyhole size={14} /><span>The key is sent to the native Rust app and saved in Windows Credential Manager. It is not saved in localStorage or GitHub.</span></div>
-            {providerError && <div className="provider-alert error-alert">{providerError}</div>}
-            {providerMessage && <div className="provider-alert success-alert">{providerMessage}</div>}
+          <div className="panel-head"><div><div className="eyebrow">MATRIX AI CONNECTION</div><h3>Connection settings</h3></div><span className={matrixKeySaved ? "connected-tag" : "coming-tag"}>{matrixKeySaved ? "CONNECTED" : "NOT CONNECTED"}</span></div>
+          <form className="provider-form" onSubmit={saveMatrixKey}>
+            <label htmlFor="matrix-model">Model</label>
+            <input id="matrix-model" className="field" value={model} onChange={(event) => setModel(event.target.value)} maxLength={100} spellCheck={false} placeholder="provider/model-id" />
+            <span className="field-hint">Enter a model ID available to your connected account. Example: openai/gpt-5.2</span>
+            <label htmlFor="matrix-key">Private access key</label>
+            <input id="matrix-key" className="field" type="password" value={apiKeyInput} onChange={(event) => setApiKeyInput(event.target.value)} autoComplete="off" spellCheck={false} placeholder={matrixKeySaved ? "A key is saved. Enter a replacement to rotate it." : "Paste your private API key"} />
+            <div className="provider-key-note"><LockKeyhole size={13} /><span>Your key goes directly to the native app and is stored in Windows Credential Manager. It is not saved in localStorage, agent profiles, or GitHub.</span></div>
+            {keyError && <div className="provider-alert error-alert">{keyError}</div>}
+            {keyMessage && <div className="provider-alert success-alert">{keyMessage}</div>}
             <div className="provider-actions">
-              <button type="submit" className="button primary" disabled={providerBusy || !providerKeyInput.trim() || !bridgeAvailable}>{providerBusy ? "Saving…" : providerKeys[provider] ? "Replace API key" : "Save API key"}</button>
-              {providerKeys[provider] && <button type="button" className="button quiet" onClick={removeProviderKey} disabled={providerBusy}>Remove key</button>}
+              <button type="submit" className="button primary" disabled={keyBusy || !apiKeyInput.trim() || !bridgeAvailable}>{keyBusy ? "Saving…" : matrixKeySaved ? "Replace private key" : "Connect MATRIX AI"}</button>
+              {matrixKeySaved && <button type="button" className="button quiet" onClick={removeMatrixKey} disabled={keyBusy}>Disconnect</button>}
             </div>
           </form>
         </section>
         <section className="panel settings-panel">
-          <div className="panel-head"><div><div className="eyebrow">LOCAL DATA</div><h3>Your workspace data</h3></div><span className="local-tag">ON THIS DEVICE</span></div>
-          <div className="setting-row"><div><strong>Agent profiles</strong><span>Saved in this app's local web storage.</span></div><CheckCircle2 /></div>
-          <div className="setting-row"><div><strong>Conversation history</strong><span>Stored locally by this app.</span></div><CheckCircle2 /></div>
-          <div className="setting-row"><div><strong>Provider credentials</strong><span>Stored by Windows Credential Manager.</span></div><ShieldCheck /></div>
-          <div className="settings-footnote">The selected provider receives the agent instructions and recent messages when you send a chat. Do not send passwords or other sensitive information.</div>
+          <div className="panel-head"><div><div className="eyebrow">PRIVACY & USAGE</div><h3>What gets shared</h3></div><span className="local-tag">CHAT ONLY</span></div>
+          <div className="setting-row"><div><strong>Agent instructions</strong><span>Name, purpose, and personality are sent with a chat request.</span></div><CheckCircle2 /></div>
+          <div className="setting-row"><div><strong>Recent conversation</strong><span>Recent messages are sent so the agent can follow context.</span></div><CheckCircle2 /></div>
+          <div className="setting-row"><div><strong>Computer access</strong><span>Files, email, and Windows controls are not connected.</span></div><LockKeyhole /></div>
+          <div className="settings-footnote">Chat content is processed by an external AI routing service. See the privacy documentation for the service and data-flow details. Provider usage or charges are separate from MATRIX Credits.</div>
         </section>
       </div>
-      <div className="notice"><ShieldCheck size={17} /><span><strong>AI usage is separate from MATRIX Credits.</strong> Your provider may apply its own usage limits or charges. Check the provider's account settings before connecting a key.</span></div>
+      <div className="notice"><ShieldCheck size={15} /><span><strong>Keep your key private.</strong> Never paste it into chat, screenshots, or GitHub. Use an account you are allowed to manage and get adult approval before connecting anything that can incur charges.</span></div>
     </>;
   }
-
   function chatPage() {
-    if (!activeAgent) return <>{heading("AGENT CHAT", "Start a conversation.", "Create an agent before opening its chat.", createButton)}<div className="large-empty panel"><div className="empty-icon big"><MessageCircle size={27} /></div><h3>Your next conversation starts here.</h3><p>Create an agent and it will appear in your workshop.</p>{createButton}</div></>;
-    const connected = providerKeys[provider];
-    const providerName = provider === "gemini" ? "Gemini" : "OpenAI";
+    if (!activeAgent) return <>
+      {heading("YOUR WORKSPACE", "Start with a conversation.", "Create an agent, give it a personality, and make this space yours.", createButton)}
+      <div className="chat-empty panel">
+        <div className="empty-icon big"><MessageCircle size={23} /></div>
+        <h3>Your chat space is ready.</h3>
+        <p>Create your first agent to start a private conversation. Connect MATRIX AI in Settings when you're ready for real responses.</p>
+        {createButton}
+      </div>
+    </>;
+    const connected = matrixKeySaved;
     return <>
-      {heading("AGENT SPACE", activeAgent.name, "A private conversation with your configured AI provider.")}
-      <div className="chat-layout">
+      <div className="chat-topline">
+        <div className="chat-title-block"><div className="eyebrow">CONVERSATION</div><h1>{activeAgent.name}</h1><p>{activeAgent.personality}</p></div>
+        <div className="chat-top-actions"><span className={connected ? "connected-tag" : "preview-tag"}>{connected ? "AI CONNECTED" : "SETUP REQUIRED"}</span><button className="icon-button" onClick={() => go("settings")} title="AI settings"><Settings2 size={14} /></button></div>
+      </div>
+      <div className="chat-layout chat-first-layout">
         <section className="chat-panel panel">
-          <div className="chat-header"><div className="avatar">{initials(activeAgent.name)}</div><div className="chat-agent-title"><strong>{activeAgent.name}</strong><span>{activeAgent.personality}</span></div><span className={connected ? "connected-tag" : "preview-tag"}>{connected ? "AI CONNECTED" : "SETUP REQUIRED"}</span></div>
           <div className="chat-messages">
-            {chatMessages.length === 0 ? <div className="chat-welcome"><div className="avatar welcome-avatar">{initials(activeAgent.name)}</div><h3>Hi, I'm {activeAgent.name}.</h3><p>{activeAgent.purpose}</p><span>{connected ? "Your " + providerName + " connection is ready. Send a message to begin." : "Connect Gemini or OpenAI in Settings to start a real AI conversation."}</span></div> : chatMessages.map((message) => <div className={message.role === "user" ? "message-row user-message" : "message-row agent-message"} key={message.id}>{message.role !== "user" && <div className="message-avatar">{initials(activeAgent.name)}</div>}<div className="bubble"><span>{message.role === "user" ? "YOU" : activeAgent.name.toUpperCase()}</span><p>{message.content}</p></div></div>)}
+            {chatMessages.length === 0 ? <div className="chat-welcome"><div className="avatar welcome-avatar">{initials(activeAgent.name)}</div><h3>Hi, I'm {activeAgent.name}.</h3><p>{activeAgent.purpose}</p><span>{connected ? "Your MATRIX AI connection is ready. Say hello to begin." : "Connect MATRIX AI in Settings to start a real conversation."}</span></div> : chatMessages.map((message) => <div className={message.role === "user" ? "message-row user-message" : "message-row agent-message"} key={message.id}>{message.role !== "user" && <div className="message-avatar">{initials(activeAgent.name)}</div>}<div className="bubble"><span>{message.role === "user" ? "YOU" : activeAgent.name.toUpperCase()}</span><p>{message.content}</p></div></div>)}
             {isSending && <div className="typing-row"><div className="message-avatar">{initials(activeAgent.name)}</div><span>{activeAgent.name} is thinking…</span></div>}
           </div>
           {chatError && <div className="chat-error">{chatError}</div>}
-          <form className="composer" onSubmit={sendMessage}><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={connected ? "Message " + activeAgent.name + "…" : "Connect a provider in Settings first…"} aria-label="Message" /><button type="button" className="voice-button" disabled title="Voice conversations are planned for a later version"><Mic size={17} /></button><button type="submit" className="send-button" disabled={!draft.trim() || isSending || !connected} aria-label="Send message"><Send size={17} /></button></form>
-          <div className="chat-footnote"><LockKeyhole size={12} /> {connected ? "Recent messages are sent securely to " + providerName + " for responses. Device permissions remain off." : "No AI provider connected. Your existing chat history remains on this device."}</div>
+          <form className="composer" onSubmit={sendMessage}><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={connected ? "Message " + activeAgent.name + "…" : "Connect MATRIX AI in Settings first…"} aria-label="Message" /><button type="button" className="voice-button" disabled title="Voice conversations are planned for a later version"><Mic size={14} /></button><button type="submit" className="send-button" disabled={!draft.trim() || isSending || !connected} aria-label="Send message"><Send size={14} /></button></form>
+          <div className="chat-footnote"><LockKeyhole size={11} /> {connected ? "Recent messages and agent instructions are sent to the external AI service. Device access remains off." : "No AI connection. Your existing conversation history stays on this device."}</div>
         </section>
-        <aside className="agent-info panel"><div className="eyebrow">AGENT PROFILE</div><div className="avatar profile-avatar">{initials(activeAgent.name)}</div><h3>{activeAgent.name}</h3><span className="personality-tag">{activeAgent.personality}</span><div className="info-divider" /><div className="eyebrow">PURPOSE</div><p>{activeAgent.purpose}</p><div className="info-divider" /><div className="permission-mini"><ShieldCheck size={16} /><span><strong>Device permissions off</strong><small>This agent can chat, but cannot access files, email, or Windows controls.</small></span></div></aside>
+        <aside className="agent-info panel"><div className="eyebrow">ABOUT THIS AGENT</div><div className="avatar profile-avatar">{initials(activeAgent.name)}</div><h3>{activeAgent.name}</h3><span className="personality-tag">{activeAgent.personality}</span><div className="info-divider" /><div className="eyebrow">PURPOSE</div><p>{activeAgent.purpose}</p><div className="info-divider" /><div className="permission-mini"><ShieldCheck size={14} /><span><strong>Device access off</strong><small>Chat only. No files, email, or Windows controls.</small></span></div><button className="text-button edit-agent-button" onClick={() => go("agents")}>Manage agent <ArrowUpRight size={12} /></button></aside>
       </div>
     </>;
   }
-
   return <div className="app-shell">
     <aside className="sidebar">
       <div className="brand"><div className="brand-mark"><Command size={20} /></div><div><strong>MATRIX</strong><span>LABS</span></div></div>
       <div className="workspace-switch"><div className="workspace-avatar">A</div><div><strong>Personal workspace</strong><span>Local environment</span></div><ChevronRight size={14} /></div>
-      <div className="nav-label">WORKSPACE</div>
+      <div className="nav-label">MESSAGES</div>
       <nav>{navItems.map((item) => { const Icon = item.icon; return <button key={item.id} className={page === item.id ? "nav-item active" : "nav-item"} onClick={() => go(item.id)}><Icon size={17} /><span>{item.label}</span>{item.id === "agents" && agents.length > 0 && <small>{agents.length}</small>}</button>; })}</nav>
-      {activeAgent && <><div className="nav-label agent-label">YOUR AGENTS</div><button className={page === "chat" ? "agent-nav active" : "agent-nav"} onClick={() => { setSelectedId(activeAgent.id); setPage("chat"); }}><div className="tiny-avatar">{initials(activeAgent.name)}</div><span>{activeAgent.name}</span><i /></button></>}
+      <div className="agent-sidebar-head"><div className="nav-label">YOUR AGENTS</div><button className="sidebar-add" onClick={openCreate} title="Create agent"><Plus size={12} /></button></div>
+      <div className="sidebar-agent-list">
+        {agents.map((agent) => <button key={agent.id} className={page === "chat" && activeAgent?.id === agent.id ? "agent-nav active" : "agent-nav"} onClick={() => { setSelectedId(agent.id); setPage("chat"); }}><div className="tiny-avatar">{initials(agent.name)}</div><span>{agent.name}</span><i /></button>)}
+        {agents.length === 0 && <div className="sidebar-empty">No conversations yet</div>}
+      </div>
       <div className="sidebar-spacer" />
-      <div className="credit-box"><div><span>MATRIX CREDITS</span><Coins size={15} /></div><strong>{credits.toLocaleString()} <small>CR</small></strong><footer><span>Earned through tasks</span><button onClick={() => go("tasks")}>View tasks <ArrowUpRight size={12} /></button></footer></div>
-      <div className="sidebar-profile"><div className="profile-circle">A</div><div><strong>Local profile</strong><span>Preview build · v0.2.0</span></div><button onClick={() => go("settings")} title="Settings"><Settings2 size={16} /></button></div>
+      <button className="credit-mini" onClick={() => go("tasks")}><Coins size={12} /><span>{credits.toLocaleString()} MATRIX Credits</span><ArrowUpRight size={11} /></button>
+      <div className="sidebar-profile"><div className="profile-circle">A</div><div><strong>Local profile</strong><span>Preview build · v0.3.0</span></div><button onClick={() => go("settings")} title="Settings"><Settings2 size={16} /></button></div>
     </aside>
     <main className="main-area">
       <header className="topbar"><div className="breadcrumbs"><span>Workspace</span><ChevronRight size={14} /><strong>{titles[page]}</strong></div><div className="topbar-actions"><div className="local-mode"><i /> DEVICE ACCESS OFF</div><button className="top-credits" onClick={() => go("tasks")}><Coins size={15} /><strong>{credits}</strong><span>credits</span></button></div></header>
@@ -432,7 +410,7 @@ function App() {
         {page === "permissions" && permissionsPage()}
         {page === "settings" && settingsPage()}
         {page === "chat" && chatPage()}
-        <footer className="page-footer"><span>MATRIX LABS <i>·</i> BUILDING WITH PERMISSION</span><span>PREVIEW 0.2.0</span></footer>
+        <footer className="page-footer"><span>MATRIX LABS <i>·</i> BUILDING WITH PERMISSION</span><span>PREVIEW 0.3.0</span></footer>
       </div>
     </main>
 
