@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Rust / Tauri
+target/
+src-tauri/target/
+*.pdb
+
+# Build outputs
+dist/
+build/
+out/
+release/
+*.msi
+*.exe
+*.dll
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+.local/
+
+# Local databases and user data
+*.sqlite
+*.sqlite3
+*.db
+data/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
