@@ -1,0 +1,4 @@
+project_id = "matrix-labs"
+
+[functions.matrix-chat]
+verify_jwt = true
