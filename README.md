@@ -16,27 +16,28 @@ The product direction includes agent profiles, text and voice conversations, a t
 6. **Credits are not model tokens.** MATRIX Credits are an in-app reward currency. Provider usage and costs are tracked separately.
 7. **Local-first by default.** Agent profiles, settings, and action history stay on the device unless a feature clearly requires an external service.
 
-## Current build — 0.1.0 preview
+## Current build — 0.2.0 preview
 
-The repository contains a Tauri 2 + Rust desktop shell and a React + TypeScript interface.
+The repository contains a Tauri 2 + Rust desktop application with a React + TypeScript interface.
 
-Working in the local preview:
-- Create and delete agent profiles.
+Working in V0.2:
+- Create and delete local agent profiles.
 - Set an agent's name, purpose, and personality preset.
-- Open a local chat preview and save messages on this device.
-- Complete three onboarding tasks and earn demo MATRIX Credits.
-- View the permission catalog and local settings.
+- Connect Google Gemini or OpenAI using a provider API key.
+- Store provider API keys in Windows Credential Manager through the native Rust layer.
+- Chat with the configured provider; recent conversation messages are sent over HTTPS.
+- Earn demo MATRIX Credits from onboarding tasks.
+- Review the permission catalog and local settings.
 
-Not connected yet:
-- No AI model/provider is connected. Chat replies are preview notices, not generated answers.
-- No Windows files are read or modified.
-- No email accounts are connected.
-- No microphone or voice features are enabled.
-- No shell, PowerShell, or arbitrary command execution is available.
-- Agent and task data currently uses webview local storage; this is prototype persistence, not the final hardened database.
+Not connected:
+- Agents cannot read, create, or modify Windows files.
+- Agents cannot access email or other accounts.
+- Agents cannot run shell commands, PowerShell, scripts, or arbitrary code.
+- Voice and microphone access are not enabled.
+- No model tools or computer-use functions are provided to the AI provider.
+- Agent profiles, conversation history, and demo credit state still use webview local storage; this is prototype persistence, not the final hardened database.
 
-See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for Windows setup and build commands.
-
+Provider data flow and setup are described in [docs/AI_PROVIDER_SETUP.md](docs/AI_PROVIDER_SETUP.md). Windows build instructions are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 ## MVP scope
 
 The first full release aims to include:
