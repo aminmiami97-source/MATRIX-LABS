@@ -1,6 +1,6 @@
 # MATRIX LABS — Local Development
 
-## Current milestone — V0.2.0
+## Current milestone — V0.3.0
 
 The repository contains a Tauri + React desktop app with a native Rust AI bridge.
 
@@ -8,13 +8,13 @@ V0.2 supports:
 - Creating and deleting local agent profiles.
 - Choosing an agent purpose and personality.
 - Connecting Gemini or OpenAI through an API key.
-- Saving and removing provider keys through Windows Credential Manager.
+- Saving and removing the MATRIX AI key through Windows Credential Manager.
 - Sending recent chat history to the selected fixed HTTPS provider endpoint.
 - Completing the demo task board and viewing MATRIX Credits.
 
 V0.2 does not provide file access, email access, shell access, computer-use tools, voice, or microphone access. The model only returns chat text. Agent profiles, local conversation history, and demo credit state still use webview local storage. This is prototype persistence, not a hardened production database.
 
-Read [AI_PROVIDER_SETUP.md](AI_PROVIDER_SETUP.md) before connecting a provider. A provider processes the agent instructions and recent chat messages. Provider usage or charges are separate from MATRIX Credits.
+Read [AI_PROVIDER_SETUP.md](AI_PROVIDER_SETUP.md) before connecting MATRIX AI. A provider processes the agent instructions and recent chat messages. Provider usage or charges are separate from MATRIX Credits.
 
 ## Windows prerequisites
 
