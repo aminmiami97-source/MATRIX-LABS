@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Minimal MATRIX LABS desktop capability. No filesystem, shell, microphone, or account-access plugins are enabled in this preview.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}
