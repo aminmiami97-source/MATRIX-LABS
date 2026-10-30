@@ -9,10 +9,10 @@
 - [ ] Add contribution and local development instructions.
 
 ## Phase 1 — Windows desktop shell
-- [ ] Create Tauri 2 + React + TypeScript application.
-- [ ] Build the MATRIX LABS navigation and visual design system.
+- [x] Create Tauri 2 + React + TypeScript application scaffold.
+- [x] Build the first MATRIX LABS navigation and visual interface preview.
 - [ ] Add first-run setup and local profile.
-- [ ] Add Windows development instructions.
+- [x] Add Windows development and installer instructions.
 - [ ] Produce the first locally runnable Windows build.
 
 ## Phase 2 — Agent Workshop
