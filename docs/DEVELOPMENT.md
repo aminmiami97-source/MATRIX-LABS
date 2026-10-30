@@ -1,17 +1,20 @@
 # MATRIX LABS — Local Development
 
-## Current milestone
+## Current milestone — V0.2.0
 
-The repository contains the first Tauri + React desktop scaffold and a local-only interface preview.
+The repository contains a Tauri + React desktop app with a native Rust AI bridge.
 
-The preview supports:
+V0.2 supports:
 - Creating and deleting local agent profiles.
-- Choosing a purpose and personality for each profile.
-- Sending messages to a local preview chat. No AI response is generated.
-- Completing three onboarding tasks and earning demo MATRIX Credits.
-- Viewing the permission center and settings.
+- Choosing an agent purpose and personality.
+- Connecting Gemini or OpenAI through an API key.
+- Saving and removing provider keys through Windows Credential Manager.
+- Sending recent chat history to the selected fixed HTTPS provider endpoint.
+- Completing the demo task board and viewing MATRIX Credits.
 
-The preview does not connect to an AI provider, read or write Windows files, connect to email, use the microphone, or execute computer actions. Agent profiles, task progress, credits, and preview chat state are stored in the webview local storage. This is prototype persistence, not a hardened production data store.
+V0.2 does not provide file access, email access, shell access, computer-use tools, voice, or microphone access. The model only returns chat text. Agent profiles, local conversation history, and demo credit state still use webview local storage. This is prototype persistence, not a hardened production database.
+
+Read [AI_PROVIDER_SETUP.md](AI_PROVIDER_SETUP.md) before connecting a provider. A provider processes the agent instructions and recent chat messages. Provider usage or charges are separate from MATRIX Credits.
 
 ## Windows prerequisites
 
@@ -33,7 +36,7 @@ Open PowerShell in the repository root and run:
 
 The first run downloads and compiles dependencies. The Tauri window should open after the frontend dev server and Rust backend are ready.
 
-## Create a Windows installer
+## Configure an AI provider\n\nIn the installed Windows app, open Settings, choose Gemini or OpenAI, set a model ID, and save the provider API key. The key is sent through Tauri IPC to Rust and saved in Windows Credential Manager. See [AI_PROVIDER_SETUP.md](AI_PROVIDER_SETUP.md) for privacy and model details.\n\n## Create a Windows installer
 
 On a Windows development machine, run:
 
@@ -52,7 +55,7 @@ Official installer guide: https://v2.tauri.app/distribute/windows-installer/
 - Never add a generic shell or PowerShell execution command for the agent.
 - Do not enable filesystem or email access just to make a demo appear functional.
 - Do not commit .env files, API keys, OAuth tokens, or local databases.
-- Provider secrets must be handled by a native secure credential store in a later milestone.
+- Provider secrets are handled by the native Rust layer through Windows Credential Manager. Never store them in frontend storage or commit them.
 - Keep the default Tauri capability list minimal and review every plugin permission before adding it.
 - Treat model output as untrusted data and validate all proposed actions inside Rust.
 
