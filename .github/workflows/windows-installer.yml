@@ -1,6 +1,16 @@
 name: Build Windows installer
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'src-tauri/**'
+      - 'package.json'
+      - 'vite.config.ts'
+      - 'tsconfig.json'
+      - 'index.html'
+      - '.github/workflows/windows-installer.yml'
   workflow_dispatch:
 
 permissions:
