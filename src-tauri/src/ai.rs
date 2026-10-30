@@ -223,15 +223,27 @@ async fn send_gemini(
 #[tauri::command]
 pub fn save_provider_key(provider: String, api_key: String) -> Result<(), String> {
     let provider = validate_provider(&provider)?;
-    let mut secret = api_key.trim().to_string();
+    let mut secret = api_key;
 
-    if secret.len() < 12 || secret.len() > 4096 || secret.contains(['\n', '\r', '\0']) {
+    let invalid = {
+        let trimmed = secret.trim();
+        trimmed.len() < 12
+            || trimmed.len() > 4096
+            || trimmed.chars().any(|ch| matches!(ch, '\n' | '\r' | '\0'))
+    };
+    if invalid {
         secret.zeroize();
         return Err("The API key looks invalid. Check it and try again.".to_string());
     }
 
-    let entry = credential_entry(provider)?;
-    let result = entry.set_password(&secret);
+    let entry = match credential_entry(provider) {
+        Ok(entry) => entry,
+        Err(error) => {
+            secret.zeroize();
+            return Err(error);
+        }
+    };
+    let result = entry.set_password(secret.trim());
     secret.zeroize();
 
     result.map_err(|_| "Windows Credential Manager could not save the API key.".to_string())
