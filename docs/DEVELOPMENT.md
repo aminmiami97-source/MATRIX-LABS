@@ -17,7 +17,7 @@ The preview does not connect to an AI provider, read or write Windows files, con
 
 Use a 64-bit Windows 10/11 development machine with:
 
-1. Node.js 20.19 or newer. A current Node.js LTS release is recommended.
+1. Node.js 20.19+ or 22.12+. A current Node.js LTS release is recommended.
 2. Rust installed using rustup, with the MSVC toolchain.
 3. Microsoft C++ Build Tools or Visual Studio Build Tools with the Desktop development with C++ workload.
 4. WebView2 Runtime. It is included with current Windows 10/11 installations in most cases.
