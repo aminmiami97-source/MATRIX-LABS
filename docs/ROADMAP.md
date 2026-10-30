@@ -4,24 +4,24 @@
 - [x] Confirm product direction.
 - [x] Locate the MATRIX-LABS GitHub repository.
 - [x] Initialize the default branch.
-- [ ] Add architecture and security documentation.
+- [x] Add architecture and security documentation.
 - [ ] Pin the development toolchain.
-- [ ] Add contribution and local development instructions.
+- [x] Add local development instructions.
 
 ## Phase 1 — Windows desktop shell
 - [x] Create Tauri 2 + React + TypeScript application scaffold.
 - [x] Build the first MATRIX LABS navigation and visual interface preview.
 - [ ] Add first-run setup and local profile.
 - [x] Add Windows development and installer instructions.
-- [ ] Produce the first locally runnable Windows build.
+- [x] Produce the first locally runnable Windows build.
 
 ## Phase 2 — Agent Workshop
-- [ ] Create, rename, and delete agents.
-- [ ] Configure name, personality, and behavior instructions.
+- [x] Create and delete agent profiles.
+- [x] Configure agent name, purpose, and personality presets.
 - [ ] Persist agent profiles locally.
-- [ ] Add text chat.
-- [ ] Add configurable AI provider integration.
-- [ ] Store provider credentials using Windows-protected storage.
+- [x] Add provider-backed text chat UI and native request bridge (requires provider API key).
+- [x] Add Gemini and OpenAI provider adapters.
+- [x] Store provider credentials using Windows Credential Manager.
 - [ ] Display provider usage separately from MATRIX Credits.
 
 ## Phase 3 — MATRIX Credits
@@ -58,3 +58,10 @@
 - [ ] Add verified update delivery and rollback strategy.
 - [ ] Publish privacy, data-retention, and security documentation.
 - [ ] Create release checksums and a reproducible build process.
+
+
+## V0.2 verification still required
+- [ ] Run the Windows installer workflow against the V0.2 code.
+- [ ] Smoke-test Gemini and OpenAI with user-provided, valid API keys.
+- [ ] Verify key save, app restart, chat request, and key removal on a clean Windows user profile.
+- [ ] Add provider usage reporting. Provider usage remains separate from MATRIX Credits.
