@@ -65,3 +65,15 @@
 - [ ] Smoke-test Gemini and OpenAI with user-provided, valid API keys.
 - [ ] Verify key save, app restart, chat request, and key removal on a clean Windows user profile.
 - [ ] Add provider usage reporting. Provider usage remains separate from MATRIX Credits.
+
+
+## V0.3 — Chat-first MATRIX AI
+- [x] Make Chat the default home screen.
+- [x] Move agents into a compact conversation sidebar.
+- [x] Apply a neutral black-and-grey visual theme and reduce icon sizes.
+- [x] Add one generic MATRIX AI connection setting.
+- [x] Use one fixed HTTPS chat-completions endpoint with a user-entered key.
+- [x] Keep the key in Windows Credential Manager, not source code or frontend storage.
+- [ ] Build and test the V0.3 Windows installer.
+- [ ] Test with a newly rotated key and a model available to the account.
+- [ ] Add visible provider usage reporting and configurable usage limits.
