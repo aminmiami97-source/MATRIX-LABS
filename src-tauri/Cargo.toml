@@ -14,8 +14,3 @@ tauri-build = { version = "2" }
 
 [dependencies]
 tauri = { version = "2" }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-reqwest = { version = "0.13.5", features = ["json"] }
-keyring = { version = "4.2.0", features = ["v1"] }
-zeroize = "1.8"
