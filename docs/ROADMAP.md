@@ -77,3 +77,19 @@
 - [ ] Build and test the V0.3 Windows installer.
 - [ ] Test with a newly rotated key and a model available to the account.
 - [ ] Add visible provider usage reporting and configurable usage limits.
+
+
+## V0.4 — MATRIX Network
+- [x] Add Supabase Auth sign-up and sign-in screens.
+- [x] Add a one-time 300 CRD welcome grant through a database trigger.
+- [x] Add a server-side credit ledger, reservation, and refund functions.
+- [x] Allow only AGOORA 2.0 and MATRIX AI 1.0 model IDs in the chat backend.
+- [x] Move the shared model-routing key out of the desktop app and into an Edge Function secret.
+- [x] Add a 1 CRD successful-response charge and server-side rate limits.
+- [x] Separate local agent and conversation storage by signed-in account.
+- [ ] Connect a hosted Supabase project and apply the migration.
+- [ ] Configure the server-only model key with a newly rotated key.
+- [ ] Add the public Supabase URL and publishable key to GitHub Actions secrets.
+- [ ] Build and test the V0.4 Windows installer.
+- [ ] Test email verification, model responses, credit refunds, and account separation.
+- [ ] Add account deletion and privacy export controls.
