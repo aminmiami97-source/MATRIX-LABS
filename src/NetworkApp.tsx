@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { createClient, type Session } from "@supabase/supabase-js";
 import { ArrowUpRight, ChevronRight, Coins, Command, LockKeyhole, LogOut, MessageCircle, Plus, Send, Settings2, ShieldCheck, Users, X } from "lucide-react";
 
@@ -154,7 +154,7 @@ export default function NetworkApp() {
     } finally { setSending(false); }
   }
 
-  function title(text: string, desc: string, action?: React.ReactNode) {
+  function title(text: string, desc: string, action?: ReactNode) {
     return <div className="page-heading"><div><div className="eyebrow">MATRIX LABS</div><h1>{text}</h1><p>{desc}</p></div>{action}</div>;
   }
   const createButton = <button className="button primary" onClick={() => setCreateOpen(true)}><Plus size={13} /> Create agent</button>;
@@ -217,7 +217,7 @@ export default function NetworkApp() {
           {title("Your account.", "Manage your MATRIX account and choose a model.")}
           <div className="settings-grid">
             <section className="panel settings-panel"><div className="panel-head"><div><div className="eyebrow">ACCOUNT</div><h3>Personal workspace</h3></div><span className="connected-tag">SIGNED IN</span></div><div className="account-details"><div className="account-avatar">{initials(session.user.user_metadata?.display_name || session.user.email || "M")}</div><div><strong>{session.user.user_metadata?.display_name || "MATRIX member"}</strong><span>{session.user.email}</span></div></div><div className="account-balance"><span className="eyebrow">AVAILABLE BALANCE</span><strong>{credits ?? "—"} <small>CRD</small></strong><p>New accounts receive 300 CRD once. One successful AI response costs 1 CRD.</p></div><button className="button quiet" onClick={signOut}><LogOut size={12} /> Sign out</button></section>
-            <section className="panel settings-panel"><div className="panel-head"><div><div className="eyebrow">MODEL PREFERENCE</div><h3>Choose your MATRIX model</h3></div><span className="local-tag">2 MODELS</span></div><div className="model-choice-list">{MODELS.map(m => <button key={m.id} className={model === m.id ? "model-choice selected" : "model-choice"} onClick={() => setModel(m.id)}><span className="model-choice-radio">{model === m.id ? "●" : "○"}</span><span className="model-choice-copy"><strong>{m.name}</strong><small>{m.info}</small><span>{m.id === MODELS[0].id ? "Lightweight everyday model." : "Larger model for more involved chats."}</span></span></button>)}</div><div className="settings-footnote">Free model routes can be rate-limited or temporarily unavailable. Do not send passwords or sensitive information.</div></section>
+            <section className="panel settings-panel"><div className="panel-head"><div><div className="eyebrow">MODEL PREFERENCE</div><h3>Choose your MATRIX model</h3></div><span className="local-tag">2 MODELS</span></div><div className="model-choice-list">{MODELS.map(m => <button key={m.id} className={model === m.id ? "model-choice selected" : "model-choice"} onClick={() => setModel(m.id)}><span className="model-choice-radio">{model === m.id ? "●" : "○"}</span><span className="model-choice-copy"><strong>{m.name}</strong><small>{m.info}</small><span>{m.id === MODELS[0].id ? "Lightweight everyday model." : "Larger model for more involved chats."}</span></span></button>)}</div><div className="settings-footnote">AGOORA's model publisher states prompts and outputs may be retained and used to improve models. Free routes can also be rate-limited. Never send passwords, secrets, or sensitive personal information.</div></section>
           </div>
           <div className="notice"><ShieldCheck size={13} /><span><strong>Your app does not contain the shared AI key.</strong> The server keeps it private. Chat instructions and recent messages are sent to the selected model service.</span></div>
         </>}
