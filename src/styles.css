@@ -316,3 +316,77 @@ textarea.field { resize: vertical; min-height: 75px; }
   .chat-content { padding-top: 22px; }
   .message-row { max-width: 94%; }
 }
+
+
+/* V0.2 — native AI provider connection and live chat */
+.connected-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 30px;
+  padding: 5px 8px;
+  border: 1px solid rgba(181,239,118,.24);
+  color: #c5ee9e;
+  background: rgba(181,239,118,.09);
+  font: 8px var(--mono);
+  letter-spacing: .09em;
+}
+.provider-panel { min-height: 0; }
+.provider-form { display: grid; gap: 8px; margin-top: 17px; }
+.provider-form label {
+  display: block;
+  margin-top: 8px;
+  color: #b9c5b9;
+  font-size: 10px;
+  font-weight: 600;
+}
+.provider-key-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px;
+  margin-top: 5px;
+  border: 1px solid rgba(181,239,118,.12);
+  border-radius: 7px;
+  background: rgba(181,239,118,.035);
+  color: #9cac99;
+  font-size: 9px;
+  line-height: 1.5;
+}
+.provider-key-note svg { flex: 0 0 auto; color: var(--accent); }
+.provider-actions { display: flex; align-items: center; gap: 8px; margin-top: 7px; }
+.provider-alert {
+  padding: 10px 11px;
+  border-radius: 7px;
+  font-size: 9px;
+  line-height: 1.5;
+}
+.error-alert { border: 1px solid rgba(230,140,129,.2); background: rgba(230,140,129,.06); color: #e7aaa2; }
+.success-alert { border: 1px solid rgba(181,239,118,.18); background: rgba(181,239,118,.055); color: #c6e8ae; }
+.settings-footnote {
+  margin-top: 14px;
+  padding-top: 13px;
+  border-top: 1px solid var(--line);
+  color: #849187;
+  font-size: 9px;
+  line-height: 1.6;
+}
+.chat-error {
+  margin: 0 13px 9px;
+  padding: 9px 11px;
+  border: 1px solid rgba(230,140,129,.2);
+  background: rgba(230,140,129,.06);
+  border-radius: 7px;
+  color: #e7aaa2;
+  font-size: 9px;
+  line-height: 1.5;
+}
+.typing-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #9eaf9d;
+  font-size: 9px;
+}
+.typing-row .message-avatar { width: 25px; height: 25px; }
+.composer button.send-button:disabled { opacity: .35; }
