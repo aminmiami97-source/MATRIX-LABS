@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
   ArrowUpRight, Bot, Check, CheckCircle2, ChevronRight, Coins, Command,
-  FileText, FolderOpen, LayoutDashboard, ListTodo, LockKeyhole,
+  FileText, FolderOpen, ListTodo, LockKeyhole,
   MessageCircle, Mic, Plus, Send, Settings2, ShieldCheck, Sparkles,
   Users, X
 } from "lucide-react";
