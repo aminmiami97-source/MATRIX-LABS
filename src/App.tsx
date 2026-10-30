@@ -144,23 +144,115 @@ function App() {
     awardTask("first-agent", 20);
   }
 
-  function sendMessage(event: FormEvent<HTMLFormElement>) {
+  async function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const text = draft.trim();
-    if (!text || !activeAgent) return;
+    if (!text || !activeAgent || isSending) return;
+
+    if (!providerKeys[provider]) {
+      setChatError("Connect an AI provider in Settings before sending messages.");
+      setPage("settings");
+      return;
+    }
+
     const id = Date.now().toString();
     const userMessage: ChatMessage = { id: id + "-u", role: "user", content: text };
-    const localNotice: ChatMessage = {
-      id: id + "-a",
-      role: "agent",
-      content: "This is the MATRIX LABS local preview. AI is not connected yet, so your message stays on this device and no model response is generated."
-    };
+    const history = [
+      ...chatMessages.map((message) => ({
+        role: message.role === "agent" ? "assistant" : message.role,
+        content: message.content
+      })),
+      { role: "user", content: text }
+    ].slice(-24);
+
+    const systemPrompt = [
+      "You are " + activeAgent.name + ", a personal assistant inside MATRIX LABS.",
+      "Personality: " + activeAgent.personality + ".",
+      "Purpose: " + activeAgent.purpose,
+      "You are chat-only in this version. You have no computer tools, no file access, no email access, and no shell access.",
+      "Never claim to have changed the user's computer, read a file, sent an email, or performed an external action.",
+      "If asked to perform a computer action, explain that device capabilities are not connected in this version."
+    ].join("\n");
+
+    setChatError("");
+    setDraft("");
     setMessages((current) => ({
       ...current,
-      [activeAgent.id]: [...(current[activeAgent.id] ?? []), userMessage, localNotice]
+      [activeAgent.id]: [...(current[activeAgent.id] ?? []), userMessage]
     }));
-    setDraft("");
-    awardTask("first-message", 15);
+    setIsSending(true);
+
+    try {
+      const reply = await invoke<{ content: string; provider: string; model: string }>("send_ai_message", {
+        provider,
+        model,
+        systemPrompt,
+        messages: history
+      });
+      const assistantMessage: ChatMessage = {
+        id: id + "-a",
+        role: "assistant",
+        content: reply.content
+      };
+      setMessages((current) => ({
+        ...current,
+        [activeAgent.id]: [...(current[activeAgent.id] ?? []), assistantMessage]
+      }));
+      awardTask("first-message", 15);
+    } catch (error) {
+      setChatError(String(error));
+    } finally {
+      setIsSending(false);
+    }
+  }
+
+  async function saveProviderKey(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const secret = providerKeyInput.trim();
+    if (!secret) {
+      setProviderError("Enter an API key first.");
+      return;
+    }
+    if (!bridgeAvailable) {
+      setProviderError("Secure provider storage is unavailable. Use the installed Windows desktop app.");
+      return;
+    }
+    setProviderBusy(true);
+    setProviderError("");
+    setProviderMessage("");
+    try {
+      await invoke<void>("save_provider_key", { provider, apiKey: secret });
+      setProviderKeys((current) => ({ ...current, [provider]: true }));
+      setProviderKeyInput("");
+      setProviderMessage("Connected. Your API key is stored in Windows Credential Manager, not in browser storage.");
+    } catch (error) {
+      setProviderError(String(error));
+    } finally {
+      setProviderBusy(false);
+    }
+  }
+
+  async function removeProviderKey() {
+    setProviderBusy(true);
+    setProviderError("");
+    setProviderMessage("");
+    try {
+      await invoke<void>("delete_provider_key", { provider });
+      setProviderKeys((current) => ({ ...current, [provider]: false }));
+      setProviderMessage("The saved provider key was removed from Windows Credential Manager.");
+    } catch (error) {
+      setProviderError(String(error));
+    } finally {
+      setProviderBusy(false);
+    }
+  }
+
+  function chooseProvider(nextProvider: ProviderId) {
+    setProvider(nextProvider);
+    setModel(nextProvider === "gemini" ? "gemini-3.8-flash" : "gpt-6-luna");
+    setProviderKeyInput("");
+    setProviderMessage("");
+    setProviderError("");
   }
 
   function removeAgent(id: string) {
