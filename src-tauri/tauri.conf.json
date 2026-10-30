@@ -27,11 +27,19 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
-    "icon": [],
+    "targets": [
+      "nsis"
+    ],
+    "icon": [
+      "icons/icon.ico"
+    ],
     "windows": {
-      "nsis": { "installMode": "currentUser" },
-      "webviewInstallMode": { "type": "downloadBootstrapper" }
+      "nsis": {
+        "installMode": "currentUser"
+      },
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      }
     }
   }
 }
