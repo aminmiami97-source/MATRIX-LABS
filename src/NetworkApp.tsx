@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { createClient, type Session } from "@supabase/supabase-js";
-import { ArrowUpRight, ChevronRight, Coins, Command, LockKeyhole, LogOut, MessageCircle, Plus, Send, Settings2, ShieldCheck, Users, X } from "lucide-react";
+import { ArrowUpRight, ChevronRight, Coins, Command, FileText, FolderOpen, LockKeyhole, LogOut, MessageCircle, Mic, Plus, Send, Settings2, ShieldCheck, Users, X } from "lucide-react";
 
 const URL = import.meta.env.VITE_SUPABASE_URL?.trim() ?? "";
 const PUBLIC_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? "";
@@ -9,6 +9,13 @@ const db = URL && PUBLIC_KEY ? createClient(URL, PUBLIC_KEY, { auth: { persistSe
 const MODELS = [
   { id: "liquid/lfm-2.5-2.6b:free", name: "AGOORA 2.0", info: "Liquid AI · LFM2.5-2.6B" },
   { id: "thinkingmachines/inkling-small:free", name: "MATRIX AI 1.0", info: "Thinking Machines · Inkling Small" }
+] as const;
+
+const navItems = [
+  { id: "chat", label: "Chat", icon: MessageCircle },
+  { id: "agents", label: "Agents", icon: Users },
+  { id: "permissions", label: "Permissions", icon: ShieldCheck },
+  { id: "settings", label: "Settings", icon: Settings2 }
 ] as const;
 
 type Agent = { id: string; name: string; purpose: string; personality: string };
