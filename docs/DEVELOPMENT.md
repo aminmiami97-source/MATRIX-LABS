@@ -55,3 +55,15 @@ Official installer guide: https://v2.tauri.app/distribute/windows-installer/
 - Provider secrets must be handled by a native secure credential store in a later milestone.
 - Keep the default Tauri capability list minimal and review every plugin permission before adding it.
 - Treat model output as untrusted data and validate all proposed actions inside Rust.
+
+
+## Build using GitHub Actions
+
+The repository also includes a manual Windows installer workflow. From the repository page:
+
+1. Open the Actions tab.
+2. Select Build Windows installer.
+3. Choose Run workflow on the main branch.
+4. When the run succeeds, open the run and download the MATRIX-LABS-Windows-Installer artifact.
+
+The downloaded artifact is a ZIP containing the NSIS setup executable. The workflow is manual; it does not create a public release or sign the installer.
