@@ -16,16 +16,16 @@ The product direction includes agent profiles, text and voice conversations, a t
 6. **Credits are not model tokens.** MATRIX Credits are an in-app reward currency. Provider usage and costs are tracked separately.
 7. **Local-first by default.** Agent profiles, settings, and action history stay on the device unless a feature clearly requires an external service.
 
-## Current build — 0.2.0 preview
+## Current build — 0.3.0 preview
 
 The repository contains a Tauri 2 + Rust desktop application with a React + TypeScript interface.
 
 Working in V0.2:
 - Create and delete local agent profiles.
 - Set an agent's name, purpose, and personality preset.
-- Connect Google Gemini or OpenAI using a provider API key.
-- Store provider API keys in Windows Credential Manager through the native Rust layer.
-- Chat with the configured provider; recent conversation messages are sent over HTTPS.
+- Connect MATRIX AI using a private access key.
+- Store the MATRIX AI key in Windows Credential Manager through the native Rust layer.
+- Chat with MATRIX AI; recent conversation messages are sent over HTTPS to the configured external AI routing service.
 - Earn demo MATRIX Credits from onboarding tasks.
 - Review the permission catalog and local settings.
 
@@ -93,3 +93,8 @@ The NSIS setup executable is an installer, not a portable single-file app binary
 ## License and contributions
 
 A public license and contribution policy will be added before wider distribution. Until then, the repository is a project workspace and no additional reuse permissions are granted by this README.
+
+
+## V0.3 UI direction
+
+V0.3 makes the conversation the home screen, keeps agents in a compact sidebar, reduces icon scale, and uses a neutral black-and-grey palette. The visible connection is branded MATRIX AI. The privacy documentation identifies the external routing service and explains where chat data goes.
