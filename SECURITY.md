@@ -52,11 +52,15 @@ The user must see what will happen, which resource is affected, and whether the 
 
 - Store agent profiles and local history locally by default.
 - Use OS-protected credential storage for API keys and OAuth tokens.
+- Never embed a shared API key in a distributed executable or installer. A distributed key can be extracted and abused.
 - Never ask for or store raw account passwords.
 - Explain which conversation content or files are sent to an external model provider.
 - Do not upload files unless the user explicitly approves that specific operation.
 - Minimize retained content and provide controls to clear local conversations and history.
 - Redact secrets from diagnostics and crash reports.
+- V0.3 stores the MATRIX AI access key through the native Rust layer in Windows Credential Manager. It is not saved in localStorage, agent profiles, conversations, logs, or Git.
+- V0.3 uses one fixed HTTPS chat-completions endpoint with redirects disabled; bearer credentials must never be forwarded to another host.
+- V0.3 sends agent instructions and recent chat messages only. No local files or computer-control tools are sent to the model.
 - In V0.2, store provider API keys through the native Rust layer in Windows Credential Manager. Never put keys in localStorage, agent profiles, conversation history, logs, or Git.
 - Only allow the fixed HTTPS endpoints for the configured Gemini and OpenAI providers in V0.2. Redirects are disabled to avoid forwarding credentials to another host.
 - Show a clear notice that the selected provider receives the agent's instructions and recent conversation history. Do not upload local files in V0.2.
