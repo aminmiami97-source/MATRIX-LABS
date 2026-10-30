@@ -1,72 +1,66 @@
-# MATRIX LABS — Local Development
+# MATRIX LABS — Development Guide
 
-## Current milestone — V0.3.0
+## Current milestone — V0.4.0
 
-The repository contains a Tauri + React desktop app with a native Rust AI bridge.
+V0.4 uses a hosted Supabase project for accounts, server-side MATRIX Credits, and authenticated chat requests.
 
-V0.2 supports:
-- Creating and deleting local agent profiles.
-- Choosing an agent purpose and personality.
-- Connecting Gemini or OpenAI through an API key.
-- Saving and removing the MATRIX AI key through Windows Credential Manager.
-- Sending recent chat history to the selected fixed HTTPS provider endpoint.
-- Completing the demo task board and viewing MATRIX Credits.
+The desktop app includes:
+- Email/password sign-up and sign-in.
+- Two model choices: AGOORA 2.0 and MATRIX AI 1.0.
+- A server-managed 300 CRD welcome grant per new account.
+- One CRD charge per successful model response, with refunds for failed requests.
+- Local agent and conversation data separated by signed-in account.
 
-V0.2 does not provide file access, email access, shell access, computer-use tools, voice, or microphone access. The model only returns chat text. Agent profiles, local conversation history, and demo credit state still use webview local storage. This is prototype persistence, not a hardened production database.
-
-Read [AI_PROVIDER_SETUP.md](AI_PROVIDER_SETUP.md) before connecting MATRIX AI. A provider processes the agent instructions and recent chat messages. Provider usage or charges are separate from MATRIX Credits.
+The app does not provide file access, email access, shell access, voice, microphone, or computer-use tools. The model only returns chat text.
 
 ## Windows prerequisites
 
 Use a 64-bit Windows 10/11 development machine with:
+1. Node.js 20.19+ or 22.12+.
+2. Rust installed using rustup with the MSVC toolchain.
+3. Microsoft C++ Build Tools with the Desktop development with C++ workload.
+4. WebView2 Runtime.
 
-1. Node.js 20.19+ or 22.12+. A current Node.js LTS release is recommended.
-2. Rust installed using rustup, with the MSVC toolchain.
-3. Microsoft C++ Build Tools or Visual Studio Build Tools with the Desktop development with C++ workload.
-4. WebView2 Runtime. It is included with current Windows 10/11 installations in most cases.
+Official Tauri prerequisites: https://v2.tauri.app/start/prerequisites/
 
-Official setup guide: https://v2.tauri.app/start/prerequisites/
+## Configure the frontend
 
-## Run the desktop preview
+Copy the public values from the Supabase project into a local .env file, based on .env.example:
 
-Open PowerShell in the repository root and run:
+    VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+    VITE_SUPABASE_ANON_KEY=YOUR_PUBLIC_PUBLISHABLE_OR_ANON_KEY
+
+These are public client configuration values. Row Level Security protects the database. Never put a Supabase secret/service key or the model-routing key in the frontend environment.
+
+## Run the desktop app
 
     npm install
     npm run tauri:dev
 
-The first run downloads and compiles dependencies. The Tauri window should open after the frontend dev server and Rust backend are ready.
-
-## Configure an AI provider\n\nIn the installed Windows app, open Settings, choose Gemini or OpenAI, set a model ID, and save the provider API key. The key is sent through Tauri IPC to Rust and saved in Windows Credential Manager. See [AI_PROVIDER_SETUP.md](AI_PROVIDER_SETUP.md) for privacy and model details.\n\n## Create a Windows installer
-
-On a Windows development machine, run:
+## Build a Windows installer
 
     npm run tauri:build
 
-The configured NSIS setup executable is written under:
+The NSIS installer is written under:
 
     src-tauri/target/release/bundle/nsis/
 
-This is an installer executable. It installs the application, including its app executable and required web assets. Do not confuse the setup executable with the installed application binary.
+## Backend
 
-Official installer guide: https://v2.tauri.app/distribute/windows-installer/
+Read docs/SUPABASE_SETUP.md. The Supabase project administrator must:
+- Apply the SQL migration.
+- Deploy the matrix-chat Edge Function.
+- Enable email confirmation.
+- Set MATRIX_AI_ROUTER_KEY in Supabase Edge Function Secrets.
+- Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to GitHub Actions secrets before building a configured installer.
+
+The model-routing key is server-only. It is never required by the Windows build and must never be committed to GitHub.
 
 ## Safe development rules
 
-- Never add a generic shell or PowerShell execution command for the agent.
-- Do not enable filesystem or email access just to make a demo appear functional.
+- Never add a generic shell or PowerShell command tool to the agent.
+- Do not enable filesystem or email access to make a demo appear functional.
 - Do not commit .env files, API keys, OAuth tokens, or local databases.
-- Provider secrets are handled by the native Rust layer through Windows Credential Manager. Never store them in frontend storage or commit them.
-- Keep the default Tauri capability list minimal and review every plugin permission before adding it.
-- Treat model output as untrusted data and validate all proposed actions inside Rust.
-
-
-## Build using GitHub Actions
-
-The repository also includes a manual Windows installer workflow. From the repository page:
-
-1. Open the Actions tab.
-2. Select Build Windows installer.
-3. Choose Run workflow on the main branch.
-4. When the run succeeds, open the run and download the MATRIX-LABS-Windows-Installer artifact.
-
-The downloaded artifact is a ZIP containing the NSIS setup executable. The workflow is manual; it does not create a public release or sign the installer.
+- Do not trust local credit values; the server ledger is authoritative.
+- Keep the model allowlist fixed to the two free model IDs until a separate reviewed release updates the server policy.
+- Treat model output as untrusted text. It must not be executed.
