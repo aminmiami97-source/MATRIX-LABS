@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import {
   ArrowUpRight, Bot, Check, CheckCircle2, ChevronRight, Coins, Command,
   FileText, FolderOpen, LayoutDashboard, ListTodo, LockKeyhole,
@@ -8,14 +9,17 @@ import {
 
 type Page = "overview" | "agents" | "tasks" | "permissions" | "settings" | "chat";
 type Agent = { id: string; name: string; purpose: string; personality: string };
-type ChatMessage = { id: string; role: "user" | "agent"; content: string };
+type ChatMessage = { id: string; role: "user" | "assistant" | "agent"; content: string };
+type ProviderId = "gemini" | "openai";
 type MessageStore = Record<string, ChatMessage[]>;
 
 const KEYS = {
   agents: "matrix-labs.agents.v1",
   credits: "matrix-labs.credits.v1",
   completed: "matrix-labs.completed-tasks.v1",
-  messages: "matrix-labs.messages.v1"
+  messages: "matrix-labs.messages.v1",
+  provider: "matrix-labs.provider.v1",
+  model: "matrix-labs.model.v1"
 };
 
 function readLocal<T>(key: string, fallback: T): T {
@@ -57,11 +61,46 @@ function App() {
   const [purpose, setPurpose] = useState("");
   const [personality, setPersonality] = useState("Calm and helpful");
   const [draft, setDraft] = useState("");
+  const [provider, setProvider] = useState<ProviderId>(() => readLocal(KEYS.provider, "gemini" as ProviderId));
+  const [model, setModel] = useState(() => readLocal(KEYS.model, "gemini-3.8-flash"));
+  const [providerKeys, setProviderKeys] = useState<Record<ProviderId, boolean>>({ gemini: false, openai: false });
+  const [providerKeyInput, setProviderKeyInput] = useState("");
+  const [providerBusy, setProviderBusy] = useState(false);
+  const [providerMessage, setProviderMessage] = useState("");
+  const [providerError, setProviderError] = useState("");
+  const [bridgeAvailable, setBridgeAvailable] = useState(true);
+  const [isSending, setIsSending] = useState(false);
+  const [chatError, setChatError] = useState("");
 
   useEffect(() => localStorage.setItem(KEYS.agents, JSON.stringify(agents)), [agents]);
   useEffect(() => localStorage.setItem(KEYS.credits, JSON.stringify(credits)), [credits]);
   useEffect(() => localStorage.setItem(KEYS.completed, JSON.stringify(completed)), [completed]);
   useEffect(() => localStorage.setItem(KEYS.messages, JSON.stringify(messages)), [messages]);
+  useEffect(() => localStorage.setItem(KEYS.provider, JSON.stringify(provider)), [provider]);
+  useEffect(() => localStorage.setItem(KEYS.model, JSON.stringify(model)), [model]);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadCredentialStatus = async () => {
+      try {
+        const [gemini, openai] = await Promise.all([
+          invoke<boolean>("provider_key_status", { provider: "gemini" }),
+          invoke<boolean>("provider_key_status", { provider: "openai" })
+        ]);
+        if (mounted) {
+          setProviderKeys({ gemini, openai });
+          setBridgeAvailable(true);
+        }
+      } catch {
+        if (mounted) {
+          setBridgeAvailable(false);
+          setProviderError("Secure provider storage is available in the installed Windows app. Open the installed MATRIX LABS desktop build.");
+        }
+      }
+    };
+    void loadCredentialStatus();
+    return () => { mounted = false; };
+  }, []);
 
   const activeAgent = agents.find((agent) => agent.id === selectedId) ?? agents[0] ?? null;
   const chatMessages = activeAgent ? messages[activeAgent.id] ?? [] : [];
