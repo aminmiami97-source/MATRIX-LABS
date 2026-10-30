@@ -57,6 +57,11 @@ The user must see what will happen, which resource is affected, and whether the 
 - Do not upload files unless the user explicitly approves that specific operation.
 - Minimize retained content and provide controls to clear local conversations and history.
 - Redact secrets from diagnostics and crash reports.
+- In V0.2, store provider API keys through the native Rust layer in Windows Credential Manager. Never put keys in localStorage, agent profiles, conversation history, logs, or Git.
+- Only allow the fixed HTTPS endpoints for the configured Gemini and OpenAI providers in V0.2. Redirects are disabled to avoid forwarding credentials to another host.
+- Show a clear notice that the selected provider receives the agent's instructions and recent conversation history. Do not upload local files in V0.2.
+- Keep the V0.2 model request chat-only: do not provide function tools, computer-control tools, shell access, or native action executors to the model.
+- Treat all model responses as untrusted text. They are displayed in chat and are not executed.
 
 ## MATRIX Credits
 
