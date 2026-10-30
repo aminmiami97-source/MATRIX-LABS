@@ -30,6 +30,8 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
       - name: Install frontend dependencies
         run: npm install
+      - name: Run Rust unit tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml
       - name: Build MATRIX LABS
         run: npm run tauri:build
       - name: Upload NSIS installer
