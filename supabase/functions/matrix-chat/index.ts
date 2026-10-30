@@ -106,7 +106,11 @@ Deno.serve(async (request) => {
 
   let payload: Record<string, unknown>;
   try {
-    payload = JSON.parse(rawBody) as Record<string, unknown>;
+    const parsed: unknown = JSON.parse(rawBody);
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return reply(400, { error: "Invalid chat request." });
+    }
+    payload = parsed as Record<string, unknown>;
   } catch {
     return reply(400, { error: "Invalid chat request." });
   }
@@ -209,7 +213,15 @@ Deno.serve(async (request) => {
 
   let data: Record<string, unknown>;
   try {
-    data = await upstream.json() as Record<string, unknown>;
+    const responseText = await upstream.text();
+    if (new TextEncoder().encode(responseText).length > 1_000_000) {
+      await refund();
+      return reply(502, { error: "The model response was too large. Your credit has been returned." });
+    }
+    data = JSON.parse(responseText) as Record<string, unknown>;
+    if (data === null || typeof data !== "object" || Array.isArray(data)) {
+      throw new Error("Invalid response shape.");
+    }
   } catch {
     await refund();
     return reply(502, { error: "The model returned an unreadable response. Your credit has been returned." });
