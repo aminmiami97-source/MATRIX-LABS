@@ -45,6 +45,14 @@ alter table public.credit_accounts enable row level security;
 alter table public.credit_ledger enable row level security;
 alter table public.matrix_usage_events enable row level security;
 
+-- Client roles are read-only for account and credit data. The server-side
+-- security-definer RPCs are the only supported path for credit mutations.
+revoke all on table public.profiles, public.credit_accounts, public.credit_ledger
+  from anon, authenticated;
+grant select on table public.profiles, public.credit_accounts, public.credit_ledger
+  to authenticated;
+revoke all on table public.matrix_usage_events from anon, authenticated;
+
 drop policy if exists "Users can read their own profile" on public.profiles;
 create policy "Users can read their own profile"
   on public.profiles for select to authenticated
