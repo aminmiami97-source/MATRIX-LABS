@@ -76,8 +76,13 @@ Deno.serve(async (request) => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const adminKey = getAdminKey();
   const routerKey = Deno.env.get("MATRIX_AI_ROUTER_KEY");
+  let adminKey: string;
+  try {
+    adminKey = getAdminKey();
+  } catch {
+    return reply(503, { error: "MATRIX Network is not configured on the server yet." });
+  }
   if (!supabaseUrl || !routerKey) {
     return reply(503, { error: "MATRIX AI is not configured on the server yet." });
   }
