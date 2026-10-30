@@ -1,54 +1,63 @@
-# MATRIX LABS 0.2 — AI Provider Setup
+# MATRIX LABS — MATRIX AI Connection
 
-## What V0.2 adds
+## V0.3 connection overview
 
-MATRIX LABS can now send text-chat requests to one of two fixed provider endpoints:
+The app presents one generic connection branded **MATRIX AI**. The external routing provider is OpenRouter, which exposes an OpenAI-compatible chat-completions API.
 
-- Google Gemini — native Generate Content API.
-- OpenAI — Chat Completions API.
+The app sends requests to:
 
-This version is chat-only. The model has no tools and cannot access Windows files, email, the shell, the microphone, or other applications.
+    https://openrouter.ai/api/v1/chat/completions
 
-## Connect a provider
+The native Rust layer attaches the user's private key as a Bearer token and sends the selected model ID plus chat messages. The desktop UI does not display the routing provider's brand name, but this documentation identifies the service so users can understand the data path.
 
-1. Open MATRIX LABS.
-2. Open Settings.
-3. Choose Google Gemini or OpenAI.
-4. Enter the model ID supported by that provider.
-5. Paste the provider API key into the password field and choose Save API key.
+## Connect a key
+
+1. Revoke any key that has been pasted into a chat, screenshot, issue, source file, or public repository.
+2. Create a replacement key in the provider's official account dashboard.
+3. Open MATRIX LABS Settings.
+4. Enter a model ID available to your account.
+5. Paste the replacement key into the Private access key field and choose Connect MATRIX AI.
 6. Open an agent chat and send a message.
 
-The app stores the key through the native Rust layer using the Windows Credential Manager. It does not store the key in localStorage, agent profiles, conversation history, or this Git repository.
+The application stores the key through the native Rust layer using Windows Credential Manager. It does not write the key to localStorage, conversation history, agent profiles, source code, or GitHub. A saved key can be removed from Settings.
 
-You can remove a saved key from the same Settings screen.
+## Why keys are not embedded in the installer
 
-## Privacy and usage
+A shared API key inside a distributed executable can be extracted by anyone who receives the installer. That would let other people consume the account's quota or credits. MATRIX LABS therefore uses a per-user key entered on the device, stored using the Windows credential vault.
 
-When you send a chat message, MATRIX LABS sends the selected provider:
-- The agent's name, purpose, and personality instructions.
-- The recent conversation history (up to 24 messages).
+Do not commit a key or place it in a source file, build variable that gets bundled into the frontend, or installer resource.
+
+## Model selection
+
+Model IDs use the routing service's model identifier format, generally including an organization or provider prefix. The default in this preview is:
+
+    openai/gpt-5.2
+
+The field is editable. Use a model ID that is currently available to the connected account. Model availability, pricing, and rate limits can change; check the provider's model catalogue and usage dashboard.
+
+## What gets sent
+
+When you submit a chat message, MATRIX LABS sends:
 - The selected model ID.
+- The agent's name, purpose, and personality instructions.
+- Up to the most recent 24 chat messages.
+- The new message.
 
-The message is sent over HTTPS to the provider's fixed official API endpoint. The app does not send local files, email, or other computer content in V0.2.
+No local files, email contents, browser data, screenshots, or other Windows content are sent by this chat-only milestone. No tools or computer-control functions are passed to the model.
 
-The provider processes the request under its own account terms, data controls, usage limits, and billing rules. MATRIX Credits are separate in-app demo points; they do not pay for provider usage or represent API tokens. Review the provider's account and usage settings before connecting a key. Use only an account you are permitted to use, and ask a parent or guardian before connecting an account that could incur charges.
+The external routing service processes the request and routes it to a model provider. The selected model provider may also process the prompt. Review the external service and model provider's privacy policies, retention rules, and account terms before using the application. Do not send passwords or sensitive personal information.
 
-A ChatGPT subscription is not an OpenAI API key. MATRIX LABS does not read a user's ChatGPT login or subscription; OpenAI API usage is configured separately.
+## Usage and credits
 
-## Supported model IDs
-
-The model field is editable. Default suggestions in this build:
-- Gemini: `gemini-3.8-flash`
-- OpenAI: `gpt-6-luna`
-
-Model availability can change. Use a model ID currently supported by the provider account you connected.
+Provider usage or charges are separate from MATRIX Credits. MATRIX Credits are local demo points in this preview and do not pay for API usage. Configure appropriate account spending limits and ask a parent or guardian before connecting any account that may incur charges.
 
 ## Troubleshooting
 
-- **Invalid API key:** verify that the key belongs to the selected provider.
-- **Model not found:** check the model ID spelling and whether the account has access to it.
-- **Quota or rate limit:** check the provider's usage dashboard and retry later.
-- **Credential Manager error:** confirm that the Windows user profile is available, then restart MATRIX LABS.
-- **No secure storage in browser preview:** use the installed Windows desktop application, not a plain browser tab.
+- **401 or 403:** revoke an exposed key and save a valid replacement.
+- **404:** the selected model ID may not be available.
+- **429:** the account quota or rate limit may have been reached.
+- **Network error:** check internet access and the external service status.
+- **Credential Manager error:** confirm the Windows user profile is available, then restart MATRIX LABS.
 
-Never paste API keys into GitHub Issues, chat messages, screenshots, or source files.
+Official API documentation: https://openrouter.ai/docs/api-reference/overview
+Official authentication guidance: https://openrouter.ai/docs/api-reference/authentication
