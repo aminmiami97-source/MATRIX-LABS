@@ -38,6 +38,7 @@ export default function NetworkApp() {
   const [messages, setMessages] = useState<Record<string, Message[]>>({});
   const [credits, setCredits] = useState<number | null>(null);
   const [creditsError, setCreditsError] = useState("");
+  const [localDataReady, setLocalDataReady] = useState(false);
   const [model, setModel] = useState<string>(MODELS[0].id);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -56,11 +57,13 @@ export default function NetworkApp() {
   }, []);
 
   useEffect(() => {
-    if (!session) { setAgents([]); setMessages({}); setCredits(null); setSelectedId(null); return; }
+    if (!session) { setLocalDataReady(false); setAgents([]); setMessages({}); setCredits(null); setSelectedId(null); return; }
+    setLocalDataReady(false);
     const id = session.user.id;
     setAgents(read(localKey(id, "agents"), []));
     setMessages(read(localKey(id, "messages"), {}));
     setModel(read(localKey(id, "model"), MODELS[0].id));
+    setLocalDataReady(true);
     let active = true;
     void db?.from("credit_accounts").select("balance").eq("user_id", id).single().then(({ data, error }) => {
       if (!active) return;
@@ -70,9 +73,9 @@ export default function NetworkApp() {
     return () => { active = false; };
   }, [session]);
 
-  useEffect(() => { if (session) localStorage.setItem(localKey(session.user.id, "agents"), JSON.stringify(agents)); }, [agents, session]);
-  useEffect(() => { if (session) localStorage.setItem(localKey(session.user.id, "messages"), JSON.stringify(messages)); }, [messages, session]);
-  useEffect(() => { if (session) localStorage.setItem(localKey(session.user.id, "model"), JSON.stringify(model)); }, [model, session]);
+  useEffect(() => { if (session && localDataReady) localStorage.setItem(localKey(session.user.id, "agents"), JSON.stringify(agents)); }, [agents, session, localDataReady]);
+  useEffect(() => { if (session && localDataReady) localStorage.setItem(localKey(session.user.id, "messages"), JSON.stringify(messages)); }, [messages, session, localDataReady]);
+  useEffect(() => { if (session && localDataReady) localStorage.setItem(localKey(session.user.id, "model"), JSON.stringify(model)); }, [model, session, localDataReady]);
 
   const activeAgent = agents.find(a => a.id === selectedId) ?? agents[0] ?? null;
   const chat = activeAgent ? messages[activeAgent.id] ?? [] : [];
