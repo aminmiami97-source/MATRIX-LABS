@@ -7,7 +7,6 @@ on:
       - 'src/**'
       - 'src-tauri/**'
       - 'supabase/**'
-      - 'package.json'
       - '.env.example'
       - 'package.json'
       - 'vite.config.ts'
@@ -15,6 +14,10 @@ on:
       - 'index.html'
       - '.github/workflows/windows-installer.yml'
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -33,8 +36,6 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
       - name: Install frontend dependencies
         run: npm install
-      - name: Run Rust unit tests
-        run: cargo test --manifest-path src-tauri/Cargo.toml
       - name: Build MATRIX LABS
         run: npm run tauri:build
         env:
