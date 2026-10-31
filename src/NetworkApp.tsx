@@ -99,7 +99,9 @@ export default function NetworkApp() {
   const [localDataReady, setLocalDataReady] = useState(false);
   const [model, setModel] = useState<string>(MODELS[0].id);
   const [draft, setDraft] = useState("");
-  const [sending, setSending] = useState(false);\n  const [regeneratingId, setRegeneratingId] = useState<string | null>(null);\n  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [chatError, setChatError] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [agentName, setAgentName] = useState("");
