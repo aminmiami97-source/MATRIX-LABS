@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { Fragment, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { createClient, type Session } from "@supabase/supabase-js";
 import { ArrowUpRight, ChevronRight, Coins, Command, FileText, FolderOpen, LockKeyhole, LogOut, MessageCircle, Mic, Plus, Send, Settings2, ShieldCheck, Users, X } from "lucide-react";
 
@@ -33,7 +33,7 @@ function renderInline(text: string, prefix: string): ReactNode[] {
     if (part.startsWith("**")) return <strong key={key}>{part.slice(2, -2)}</strong>;
     if (part.startsWith("*")) return <em key={key}>{part.slice(1, -1)}</em>;
     if (part.startsWith("`")) return <code className="inline-code" key={key}>{part.slice(1, -1)}</code>;
-    return <React.Fragment key={key}>{part}</React.Fragment>;
+    return <Fragment key={key}>{part}</Fragment>;
   });
 }
 
@@ -71,7 +71,7 @@ function FormattedMessage({ content }: { content: string }) {
     }
     const paragraph: string[] = [line.trim()]; i++;
     while (i < lines.length && lines[i].trim() && !/^(#{1,6})\s+/.test(lines[i]) && !/^\s*[-*+]\s+/.test(lines[i]) && !/^\s*\d+[.)]\s+/.test(lines[i]) && !lines[i].trim().startsWith("```")) paragraph.push(lines[i++].trim());
-    blocks.push(<p key={"p"+blocks.length}>{paragraph.map((x,n)=><React.Fragment key={n}>{n ? " " : ""}{renderInline(x,"p"+blocks.length+n)}</React.Fragment>)}</p>);
+    blocks.push(<p key={"p"+blocks.length}>{paragraph.map((x,n)=><Fragment key={n}>{n ? " " : ""}{renderInline(x,"p"+blocks.length+n)}</Fragment>)}</p>);
   }
   return <div className="message-content">{blocks}</div>;
 }
