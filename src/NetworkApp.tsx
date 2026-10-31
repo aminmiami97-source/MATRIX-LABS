@@ -26,6 +26,56 @@ function localKey(uid: string, part: string) { return "matrix." + uid + "." + pa
 function read<T>(key: string, fallback: T): T {
   try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) as T : fallback; } catch { return fallback; }
 }
+function renderInline(text: string, prefix: string): ReactNode[] {
+  const parts = text.split(/(\*\*.*?\*\*|\*.*?\*|`[^`]+`)/g).filter(Boolean);
+  return parts.map((part, i) => {
+    const key = prefix + i;
+    if (part.startsWith("**")) return <strong key={key}>{part.slice(2, -2)}</strong>;
+    if (part.startsWith("*")) return <em key={key}>{part.slice(1, -1)}</em>;
+    if (part.startsWith("`")) return <code className="inline-code" key={key}>{part.slice(1, -1)}</code>;
+    return <React.Fragment key={key}>{part}</React.Fragment>;
+  });
+}
+
+function FormattedMessage({ content }: { content: string }) {
+  const lines = content.replace(/\r\n?/g, "\n").split("\n");
+  const blocks: ReactNode[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (!line.trim()) { i++; continue; }
+    if (line.trim().startsWith("```")) {
+      const language = line.trim().slice(3).trim(); i++; const code: string[] = [];
+      while (i < lines.length && !lines[i].trim().startsWith("```")) code.push(lines[i++]);
+      if (i < lines.length) i++;
+      blocks.push(<pre className="code-block" key={"code"+blocks.length}><div className="code-language">{language || "CODE"}</div><code>{code.join("\n")}</code></pre>);
+      continue;
+    }
+    const heading = line.match(/^(#{1,6})\s+(.+)$/);
+    if (heading) {
+      const children = renderInline(heading[2], "h"+blocks.length), level = heading[1].length;
+      blocks.push(level === 1 ? <h2 key={"h"+blocks.length}>{children}</h2> : level === 2 ? <h3 key={"h"+blocks.length}>{children}</h3> : <h4 key={"h"+blocks.length}>{children}</h4>);
+      i++; continue;
+    }
+    if (/^\s*[-*+]\s+/.test(line)) {
+      const items: string[] = [];
+      while (i < lines.length && /^\s*[-*+]\s+/.test(lines[i])) items.push(lines[i++].replace(/^\s*[-*+]\s+/, ""));
+      blocks.push(<ul key={"ul"+blocks.length}>{items.map((x,n)=><li key={n}>{renderInline(x,"ul"+n)}</li>)}</ul>);
+      continue;
+    }
+    if (/^\s*\d+[.)]\s+/.test(line)) {
+      const items: string[] = [];
+      while (i < lines.length && /^\s*\d+[.)]\s+/.test(lines[i])) items.push(lines[i++].replace(/^\s*\d+[.)]\s+/, ""));
+      blocks.push(<ol key={"ol"+blocks.length}>{items.map((x,n)=><li key={n}>{renderInline(x,"ol"+n)}</li>)}</ol>);
+      continue;
+    }
+    const paragraph: string[] = [line.trim()]; i++;
+    while (i < lines.length && lines[i].trim() && !/^(#{1,6})\s+/.test(lines[i]) && !/^\s*[-*+]\s+/.test(lines[i]) && !/^\s*\d+[.)]\s+/.test(lines[i]) && !lines[i].trim().startsWith("```")) paragraph.push(lines[i++].trim());
+    blocks.push(<p key={"p"+blocks.length}>{paragraph.map((x,n)=><React.Fragment key={n}>{n ? " " : ""}{renderInline(x,"p"+blocks.length+n)}</React.Fragment>)}</p>);
+  }
+  return <div className="message-content">{blocks}</div>;
+}
+
 function initials(value: string) { return value.split(/\s+/).slice(0, 2).map(x => x[0]?.toUpperCase() ?? "").join("") || "AI"; }
 
 export default function NetworkApp() {
@@ -239,7 +289,7 @@ export default function NetworkApp() {
         </>}
         {page === "chat" && (activeAgent ? <>
           <div className="chat-topline"><div className="chat-title-block"><div className="eyebrow">CONVERSATION</div><h1>{activeAgent.name}</h1><p>{activeAgent.personality}</p></div><div className="chat-top-actions"><select className="model-select" aria-label="Choose MATRIX model" value={model} onChange={e => setModel(e.target.value)}>{MODELS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select><button className="icon-button" onClick={() => setPage("settings")} title="Settings"><Settings2 size={12} /></button></div></div>
-          <div className="chat-layout chat-first-layout"><section className="chat-panel panel"><div className="chat-messages">{chat.length === 0 ? <div className="chat-welcome"><div className="avatar welcome-avatar">{initials(activeAgent.name)}</div><h3>Hi, I'm {activeAgent.name}.</h3><p>{activeAgent.purpose}</p><span>Powered by {selectedModel.name}. Choose a model above and say hello.</span></div> : chat.map(message => <div className={message.role === "user" ? "message-row user-message" : "message-row agent-message"} key={message.id}>{message.role !== "user" && <div className="message-avatar">{initials(activeAgent.name)}</div>}<div className="bubble"><span>{message.role === "user" ? "YOU" : activeAgent.name.toUpperCase()}</span><p>{message.content}</p></div></div>)}{sending && <div className="typing-row"><div className="message-avatar">{initials(activeAgent.name)}</div><span>{activeAgent.name} is thinking…</span></div>}</div>
+          <div className="chat-layout chat-first-layout"><section className="chat-panel panel"><div className="chat-messages">{chat.length === 0 ? <div className="chat-welcome"><div className="avatar welcome-avatar">{initials(activeAgent.name)}</div><h3>Hi, I'm {activeAgent.name}.</h3><p>{activeAgent.purpose}</p><span>Powered by {selectedModel.name}. Choose a model above and say hello.</span></div> : chat.map(message => <div className={message.role === "user" ? "message-row user-message" : "message-row agent-message"} key={message.id}>{message.role !== "user" && <div className="message-avatar">{initials(activeAgent.name)}</div>}<div className="bubble"><span>{message.role === "user" ? "YOU" : activeAgent.name.toUpperCase()}</span><FormattedMessage content={message.content} /></div></div>)}{sending && <div className="typing-row"><div className="message-avatar">{initials(activeAgent.name)}</div><span>{activeAgent.name} is thinking…</span></div>}</div>
             {chatError && <div className="chat-error">{chatError}</div>}
             <form className="composer" onSubmit={send}><input value={draft} onChange={e => setDraft(e.target.value)} placeholder={session.user.is_anonymous && guestRemaining === 0 ? "Guest limit reached…" : !session.user.is_anonymous && credits === 0 ? "No MATRIX Credits remaining…" : "Message " + activeAgent.name + "…"} aria-label="Message" /><button className="voice-button" type="button" disabled title="Voice is planned for a later version"><Mic size={13} /></button><button className="send-button" type="submit" disabled={!draft.trim() || sending || (session.user.is_anonymous ? guestRemaining < 1 : credits === null || credits < 1)} aria-label="Send message"><Send size={13} /></button></form>
             <div className="chat-footnote"><LockKeyhole size={10} /> {selectedModel.name} · {session.user.is_anonymous ? guestRemaining + " guest messages remaining · 10 per 24 hours" : "1 CRD per successful reply · " + (credits ?? "—") + " CRD available"}</div>
