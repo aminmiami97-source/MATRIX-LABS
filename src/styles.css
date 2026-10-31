@@ -650,3 +650,12 @@ svg { width: 15px; height: 15px; }
 .code-block { max-width: 100%; overflow-x: auto; margin: 12px 0; padding: 12px 14px; border: 1px solid rgba(211,232,213,.1); border-radius: 8px; background: #090d0b; }
 .code-language { margin-bottom: 8px; color: #87948b; font: 9px var(--mono); text-transform: uppercase; letter-spacing: .12em; }
 .code-block code { display: block; color: #dce6df; font: 11px/1.65 var(--mono); white-space: pre; }
+
+
+/* Message-level assistant actions */
+.message-actions { display: flex; align-items: center; gap: 6px; margin-top: 10px; padding-top: 7px; border-top: 1px solid rgba(255,255,255,.055); }
+.message-action { display: inline-flex; align-items: center; gap: 5px; padding: 4px 6px; color: #89958e; border: 0; border-radius: 5px; background: transparent; font: 9px var(--mono); cursor: pointer; transition: color .15s ease, background .15s ease; }
+.message-action:hover:not(:disabled) { color: #e0e8e2; background: rgba(255,255,255,.06); }
+.message-action:disabled { opacity: .45; cursor: not-allowed; }
+.message-action .spin { animation: matrix-spin .9s linear infinite; }
+@keyframes matrix-spin { to { transform: rotate(360deg); } }
