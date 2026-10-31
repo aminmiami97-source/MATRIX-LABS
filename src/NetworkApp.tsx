@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { createClient, type Session } from "@supabase/supabase-js";
-import { ArrowUpRight, ChevronRight, Coins, Command, Copy, FileText, FolderOpen, LockKeyhole, LogOut, MessageCircle, Mic, Plus, RefreshCw, Send, Settings2, ShieldCheck, Users, X } from "lucide-react";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { ArrowUpRight, ChevronRight, Coins, Command, Copy, FileText, FolderOpen, LockKeyhole, LogOut, Mail, MessageCircle, Mic, Plus, RefreshCw, Send, Settings2, ShieldCheck, Users, X } from "lucide-react";
 
 const URL = import.meta.env.VITE_SUPABASE_URL?.trim() ?? "";
 const PUBLIC_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? "";
@@ -14,13 +15,14 @@ const MODELS = [
 const navItems = [
   { id: "chat", label: "Chat", icon: MessageCircle },
   { id: "agents", label: "Agents", icon: Users },
+  { id: "plugins", label: "Plugins", icon: Mail },
   { id: "permissions", label: "Permissions", icon: ShieldCheck },
   { id: "settings", label: "Settings", icon: Settings2 }
 ] as const;
 
 type Agent = { id: string; name: string; purpose: string; personality: string };
 type Message = { id: string; role: "user" | "assistant"; content: string };
-type Page = "chat" | "agents" | "settings" | "permissions" | "credits";
+type Page = "chat" | "agents" | "settings" | "plugins" | "permissions" | "credits";
 
 function localKey(uid: string, part: string) { return "matrix." + uid + "." + part; }
 function read<T>(key: string, fallback: T): T {
@@ -107,6 +109,14 @@ export default function NetworkApp() {
   const [agentName, setAgentName] = useState("");
   const [agentPurpose, setAgentPurpose] = useState("");
   const [agentPersonality, setAgentPersonality] = useState("Calm and helpful");
+  const [gmailConnected, setGmailConnected] = useState(false);
+  const [gmailEmail, setGmailEmail] = useState("");
+  const [gmailBusy, setGmailBusy] = useState(false);
+  const [gmailError, setGmailError] = useState("");
+  const [gmailNotice, setGmailNotice] = useState("");
+  const [mailTo, setMailTo] = useState("");
+  const [mailSubject, setMailSubject] = useState("");
+  const [mailBody, setMailBody] = useState("");
 
   useEffect(() => {
     if (!db) { setAuthReady(true); return; }
@@ -148,6 +158,64 @@ export default function NetworkApp() {
   useEffect(() => { if (session && localDataReady) localStorage.setItem(localKey(session.user.id, "messages"), JSON.stringify(messages)); }, [messages, session, localDataReady]);
   useEffect(() => { if (session && localDataReady) localStorage.setItem(localKey(session.user.id, "model"), JSON.stringify(model)); }, [model, session, localDataReady]);
   useEffect(() => { if (session?.user.is_anonymous && localDataReady) localStorage.setItem(localKey(session.user.id, "guest_remaining"), JSON.stringify(guestRemaining)); }, [guestRemaining, session, localDataReady]);
+
+
+  useEffect(() => {
+    if (!session || session.user.is_anonymous || page !== "plugins" || !db) return;
+    let active = true;
+    void db.functions.invoke<{ connected: boolean; email: string | null }>("gmail-plugin", { body: { action: "status" } }).then(({ data, error }) => {
+      if (!active) return;
+      if (error) setGmailError("Could not check Gmail connection status.");
+      else { setGmailConnected(!!data?.connected); setGmailEmail(data?.email || ""); }
+    });
+    return () => { active = false; };
+  }, [session, page]);
+
+  async function connectGmail() {
+    if (!db || gmailBusy) return;
+    setGmailBusy(true); setGmailError(""); setGmailNotice("");
+    try {
+      const { data, error } = await db.functions.invoke<{ url: string }>("gmail-plugin", { body: { action: "start" } });
+      if (error || !data?.url) throw new Error("Could not start Google authorization.");
+      await openUrl(data.url);
+      setGmailNotice("Google opened in your browser. Approve Gmail access there, then return and refresh status.");
+    } catch (error) { setGmailError(error instanceof Error ? error.message : "Could not open Google sign-in."); }
+    finally { setGmailBusy(false); }
+  }
+
+  async function refreshGmailStatus() {
+    if (!db) return;
+    setGmailError(""); setGmailNotice("");
+    const { data, error } = await db.functions.invoke<{ connected: boolean; email: string | null }>("gmail-plugin", { body: { action: "status" } });
+    if (error) setGmailError("Could not check Gmail connection status.");
+    else { setGmailConnected(!!data?.connected); setGmailEmail(data?.email || ""); setGmailNotice(data?.connected ? "Gmail connection verified." : "Gmail is not connected yet."); }
+  }
+
+  async function disconnectGmail() {
+    if (!db || gmailBusy) return;
+    setGmailBusy(true); setGmailError(""); setGmailNotice("");
+    try {
+      const { data, error } = await db.functions.invoke<{ disconnected: boolean; error?: string }>("gmail-plugin", { body: { action: "disconnect" } });
+      if (error || !data?.disconnected) throw new Error(data?.error || "Could not disconnect Gmail.");
+      setGmailConnected(false); setGmailEmail(""); setGmailNotice("Gmail has been disconnected.");
+    } catch (error) { setGmailError(error instanceof Error ? error.message : "Could not disconnect Gmail."); }
+    finally { setGmailBusy(false); }
+  }
+
+  async function sendApprovedEmail() {
+    if (!db || gmailBusy) return;
+    const approved = window.confirm("Send this email from " + gmailEmail + "?\n\nTo: " + mailTo + "\nSubject: " + mailSubject + "\n\n" + mailBody);
+    if (!approved) return;
+    setGmailBusy(true); setGmailError(""); setGmailNotice("");
+    try {
+      const { data, error } = await db.functions.invoke<{ sent: boolean; error?: string }>("gmail-plugin", {
+        body: { action: "send", approved: true, to: mailTo, subject: mailSubject, body: mailBody }
+      });
+      if (error || !data?.sent) throw new Error(data?.error || "Gmail could not send the email.");
+      setMailTo(""); setMailSubject(""); setMailBody(""); setGmailNotice("Email sent successfully.");
+    } catch (error) { setGmailError(error instanceof Error ? error.message : "Gmail send failed."); }
+    finally { setGmailBusy(false); }
+  }
 
   const activeAgent = agents.find(a => a.id === selectedId) ?? agents[0] ?? null;
   const chat = activeAgent ? messages[activeAgent.id] ?? [] : [];
@@ -355,6 +423,30 @@ export default function NetworkApp() {
           </div>
           <div className="notice"><ShieldCheck size={13} /><span><strong>AI connection: Automatic.</strong> MATRIX LABS connects to its secured chat service without asking you for an API key. Your key stays on the server, and you can switch between AGOORA 2.0 and MATRIX AI 1.0 above. Only chat instructions and recent messages are sent to the selected model service.</span></div>
         </>}
+
+        {page === "plugins" && <>
+          {title("Your plugins.", "Connect external services only when you choose to.")}
+          {session.user.is_anonymous ? <div className="notice muted-notice"><LockKeyhole size={13} /><span>Sign in to a MATRIX LABS account to connect plugins. Guest sessions cannot store external account connections.</span></div> : <>
+            <section className="plugin-card panel">
+              <div className="plugin-card-head"><div className="plugin-brand-icon"><Mail size={22} /></div><div className="plugin-card-title"><div className="eyebrow">EMAIL · GOOGLE</div><h3>Gmail</h3><p>Send email from your connected Gmail account, with your approval each time.</p></div><span className={gmailConnected ? "plugin-status connected" : "plugin-status"}>{gmailConnected ? "CONNECTED" : "NOT CONNECTED"}</span></div>
+              {gmailConnected && <div className="plugin-account"><ShieldCheck size={13} /> Connected account: <strong>{gmailEmail}</strong></div>}
+              <div className="plugin-scope"><ShieldCheck size={13} /><span><strong>Limited permission:</strong> MATRIX LABS requests permission to send email only. It does not request inbox reading access.</span></div>
+              <div className="plugin-actions">{!gmailConnected ? <button className="button primary" onClick={() => void connectGmail()} disabled={gmailBusy}><ArrowUpRight size={13} /> {gmailBusy ? "Opening Google…" : "Connect Gmail"}</button> : <button className="button secondary" onClick={() => void disconnectGmail()} disabled={gmailBusy}>{gmailBusy ? "Disconnecting…" : "Disconnect"}</button>}<button className="button quiet" onClick={() => void refreshGmailStatus()} disabled={gmailBusy}>Refresh status</button></div>
+              <p className="plugin-footnote">Connect opens Google's official sign-in page in your browser. MATRIX LABS never sees your Google password.</p>
+            </section>
+            {gmailConnected && <section className="panel email-compose"><div className="eyebrow">GMAIL COMPOSER</div><h3>Prepare an email</h3><p className="compose-note">Review the recipient, subject, and message. Nothing is sent until you explicitly approve it.</p>
+              <form onSubmit={e => { e.preventDefault(); void sendApprovedEmail(); }}>
+                <label htmlFor="gmail-to">To</label><input id="gmail-to" className="field" type="email" required maxLength={254} value={mailTo} onChange={e => setMailTo(e.target.value)} placeholder="recipient@example.com" />
+                <label htmlFor="gmail-subject">Subject</label><input id="gmail-subject" className="field" required maxLength={200} value={mailSubject} onChange={e => setMailSubject(e.target.value)} placeholder="Email subject" />
+                <label htmlFor="gmail-body">Message</label><textarea id="gmail-body" className="field" required maxLength={20000} rows={7} value={mailBody} onChange={e => setMailBody(e.target.value)} placeholder="Write your email…" />
+                <div className="compose-actions"><span><LockKeyhole size={11} /> Confirmation required before sending</span><button className="button primary" type="submit" disabled={gmailBusy}>{gmailBusy ? "Sending…" : "Review & Send"}</button></div>
+              </form>
+            </section>}
+          </>}
+          {gmailError && <div className="provider-alert error-alert">{gmailError}</div>}
+          {gmailNotice && <div className="provider-alert success-alert">{gmailNotice}</div>}
+        </>}
+
         {page === "permissions" && <>
           {title("Your permissions.", "No computer access is enabled in this release.")}
           <section className="permission-status panel"><div className="permission-shield"><ShieldCheck size={21} /></div><div><div className="eyebrow">CURRENT DEVICE STATUS</div><h3>No system permissions granted</h3><p>Agents can chat, but cannot read files, use email, or control Windows.</p></div><span className="safe-tag">PROTECTED</span></section>
