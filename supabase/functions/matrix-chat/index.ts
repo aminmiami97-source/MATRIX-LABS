@@ -187,8 +187,12 @@ Deno.serve(async (request) => {
         "X-Title": "MATRIX LABS",
       },
       body: JSON.stringify({
-        // MATRIX AI 1.0 is a product-level model identity. OpenRouter selects an available free model for each request.
+        // Every entry in this fallback chain is explicitly free. Never add a paid model here.
+        // Keep the user's selected model first, then let OpenRouter retry other free routes.
         model: modelId === "thinkingmachines/inkling-small:free" ? "openrouter/free" : modelId,
+        models: modelId === "liquid/lfm-2.5-2.6b:free"
+          ? ["liquid/lfm-2.5-2.6b:free", "openrouter/free", "thinkingmachines/inkling-small:free"]
+          : ["openrouter/free", "liquid/lfm-2.5-2.6b:free", "thinkingmachines/inkling-small:free"],
         messages: [
           { role: "system", content: systemPrompt },
           ...messages,
@@ -233,7 +237,11 @@ Deno.serve(async (request) => {
 
     await refund();
     if (upstream.status === 429) {
-      return reply(429, { error: "The free model service is rate-limited right now. Your credit has been returned." });
+      const retryAfter = upstream.headers.get("Retry-After");
+      return reply(429, {
+        error: "All currently available free model routes are busy. Your credit has been returned. Please wait briefly and try again.",
+        retryAfterSeconds: retryAfter ? Math.min(120, Math.max(1, Number(retryAfter) || 5)) : 5,
+      });
     }
     if (upstream.status === 401) {
       return reply(503, { error: "OpenRouter rejected the server API key (401). Check MATRIX_AI_ROUTER_KEY in Supabase Function Secrets. Your credit has been returned." });
