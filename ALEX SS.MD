@@ -7,7 +7,7 @@ Use this file as a setup note for your **private MATRIX LABS server**.
 Paste your **newly rotated API key** after the equals sign when preparing the server secret:
 
 ```text
-MATRIX_AI_ROUTER_KEY=
+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
 
 ```
 
