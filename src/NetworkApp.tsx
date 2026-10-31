@@ -45,6 +45,7 @@ export default function NetworkApp() {
   const [messages, setMessages] = useState<Record<string, Message[]>>({});
   const [credits, setCredits] = useState<number | null>(null);
   const [creditsError, setCreditsError] = useState("");
+  const [guestRemaining, setGuestRemaining] = useState(10);
   const [localDataReady, setLocalDataReady] = useState(false);
   const [model, setModel] = useState<string>(MODELS[0].id);
   const [draft, setDraft] = useState("");
@@ -67,9 +68,20 @@ export default function NetworkApp() {
     if (!session) { setLocalDataReady(false); setAgents([]); setMessages({}); setCredits(null); setSelectedId(null); return; }
     setLocalDataReady(false);
     const id = session.user.id;
-    setAgents(read(localKey(id, "agents"), []));
+    const savedAgents = read<Agent[]>(localKey(id, "agents"), []);
+    setAgents(savedAgents);
     setMessages(read(localKey(id, "messages"), {}));
     setModel(read(localKey(id, "model"), MODELS[0].id));
+    if (session.user.is_anonymous) {
+      setCredits(null); setCreditsError("");
+      setGuestRemaining(read(localKey(id, "guest_remaining"), 10));
+      if (savedAgents.length === 0) {
+        const starter: Agent = { id: crypto.randomUUID(), name: "MATRIX Assistant", purpose: "Your guest AI assistant.", personality: "Calm and helpful" };
+        setAgents([starter]); setSelectedId(starter.id);
+      }
+      setLocalDataReady(true);
+      return;
+    }
     setLocalDataReady(true);
     let active = true;
     void db?.from("credit_accounts").select("balance").eq("user_id", id).single().then(({ data, error }) => {
@@ -83,6 +95,7 @@ export default function NetworkApp() {
   useEffect(() => { if (session && localDataReady) localStorage.setItem(localKey(session.user.id, "agents"), JSON.stringify(agents)); }, [agents, session, localDataReady]);
   useEffect(() => { if (session && localDataReady) localStorage.setItem(localKey(session.user.id, "messages"), JSON.stringify(messages)); }, [messages, session, localDataReady]);
   useEffect(() => { if (session && localDataReady) localStorage.setItem(localKey(session.user.id, "model"), JSON.stringify(model)); }, [model, session, localDataReady]);
+  useEffect(() => { if (session?.user.is_anonymous && localDataReady) localStorage.setItem(localKey(session.user.id, "guest_remaining"), JSON.stringify(guestRemaining)); }, [guestRemaining, session, localDataReady]);
 
   const activeAgent = agents.find(a => a.id === selectedId) ?? agents[0] ?? null;
   const chat = activeAgent ? messages[activeAgent.id] ?? [] : [];
@@ -109,6 +122,13 @@ export default function NetworkApp() {
   }
 
   async function signOut() { await db?.auth.signOut(); setPage("chat"); }
+  async function continueAsGuest() {
+    if (!db || authBusy) return;
+    setAuthBusy(true); setAuthError("");
+    try { const { data, error } = await db.auth.signInAnonymously(); if (error) throw error; if (data.session) setSession(data.session); }
+    catch (error) { setAuthError(error instanceof Error ? error.message : "Guest access is unavailable."); }
+    finally { setAuthBusy(false); }
+  }
 
   function createAgent(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -129,7 +149,9 @@ export default function NetworkApp() {
     event.preventDefault();
     const text = draft.trim();
     if (!text || !activeAgent || !db || !session || sending) return;
-    if (!credits || credits < 1) { setChatError("You have no MATRIX Credits remaining."); return; }
+    const isGuest = session.user.is_anonymous;
+    if (!isGuest && (!credits || credits < 1)) { setChatError("You have no MATRIX Credits remaining."); return; }
+    if (isGuest && guestRemaining < 1) { setChatError("Guest limit reached. Create an account for more messages."); return; }
     const id = crypto.randomUUID();
     const history = [...chat.map(m => ({ role: m.role, content: m.content })), { role: "user", content: text }].slice(-24);
     const systemPrompt = [
@@ -142,7 +164,7 @@ export default function NetworkApp() {
     setMessages(current => ({ ...current, [activeAgent.id]: [...(current[activeAgent.id] ?? []), { id, role: "user", content: text }] }));
     setDraft(""); setChatError(""); setSending(true);
     try {
-      const { data, error } = await db.functions.invoke<{ content: string; balance: number }>("matrix-chat", {
+      const { data, error } = await db.functions.invoke<{ content: string; balance: number | null; guestRemaining?: number | null }>("matrix-chat", {
         body: { requestId: crypto.randomUUID(), modelId: model, systemPrompt, messages: history }
       });
       if (error) {
@@ -152,12 +174,13 @@ export default function NetworkApp() {
         }
         throw new Error(message || "MATRIX AI request failed.");
       }
-      if (!data || typeof data.content !== "string" || typeof data.balance !== "number") throw new Error("MATRIX AI returned an invalid response.");
-      setCredits(data.balance);
+      if (!data || typeof data.content !== "string") throw new Error("MATRIX AI returned an invalid response.");
+      if (isGuest) { if (typeof data.guestRemaining === "number") setGuestRemaining(data.guestRemaining); }
+      else { if (typeof data.balance !== "number") throw new Error("Invalid credit balance."); setCredits(data.balance); }
       setMessages(current => ({ ...current, [activeAgent.id]: [...(current[activeAgent.id] ?? []), { id: id + "-reply", role: "assistant", content: data.content }] }));
     } catch (error) {
       setChatError(error instanceof Error ? error.message : String(error));
-      await refreshCredits();
+      if (!isGuest) await refreshCredits();
     } finally { setSending(false); }
   }
 
@@ -189,6 +212,8 @@ export default function NetworkApp() {
       {authNote && <div className="provider-alert success-alert">{authNote}</div>}
       <button className="button primary auth-submit" type="submit" disabled={authBusy || !email.trim() || password.length < 8 || (mode === "sign_up" && displayName.trim().length < 2)}>{authBusy ? "Please wait…" : mode === "sign_up" ? "Create account" : "Sign in"}</button>
     </form>
+    <button className="button secondary auth-submit guest-submit" type="button" onClick={continueAsGuest} disabled={authBusy}>{authBusy ? "Starting guest session…" : "Continue as Guest"}</button>
+    <div className="auth-footnote">Guest access: 10 messages per rolling 24 hours. No CRD required.</div>
     <button className="auth-switch" onClick={() => { setMode(mode === "sign_up" ? "sign_in" : "sign_up"); setAuthError(""); setAuthNote(""); }}>{mode === "sign_up" ? "Already have an account? Sign in" : "New to MATRIX LABS? Create an account"}</button>
     <div className="auth-footnote">Email verification is required. The 300 CRD welcome grant is issued once per account.</div>
   </section></div>;
@@ -202,11 +227,11 @@ export default function NetworkApp() {
       <div className="agent-sidebar-head"><div className="nav-label">YOUR AGENTS</div><button className="sidebar-add" onClick={() => setCreateOpen(true)} title="Create agent"><Plus size={11} /></button></div>
       <div className="sidebar-agent-list">{agents.map(agent => <button key={agent.id} className={page === "chat" && activeAgent?.id === agent.id ? "agent-nav active" : "agent-nav"} onClick={() => { setSelectedId(agent.id); setPage("chat"); }}><div className="tiny-avatar">{initials(agent.name)}</div><span>{agent.name}</span><i /></button>)}{agents.length === 0 && <div className="sidebar-empty">No conversations yet</div>}</div>
       <div className="sidebar-spacer" />
-      <button className="credit-mini" onClick={() => setPage("credits")}><Coins size={11} /><span>{credits === null ? "—" : credits.toLocaleString()} MATRIX CRD</span><ArrowUpRight size={10} /></button>
-      <div className="sidebar-profile"><div className="profile-circle">{initials(session.user.user_metadata?.display_name || session.user.email || "M")}</div><div><strong>{session.user.email}</strong><span>Signed in · V0.4.0</span></div><button onClick={signOut} title="Sign out"><LogOut size={13} /></button></div>
+      {session.user.is_anonymous ? <div className="credit-mini guest-credit"><Users size={11} /><span>GUEST · {guestRemaining}/10 LEFT</span></div> : <button className="credit-mini" onClick={() => setPage("credits")}><Coins size={11} /><span>{credits === null ? "—" : credits.toLocaleString()} MATRIX CRD</span><ArrowUpRight size={10} /></button>}
+      <div className="sidebar-profile"><div className="profile-circle">{initials(session.user.user_metadata?.display_name || session.user.email || "M")}</div><div><strong>{session.user.is_anonymous ? "Guest" : session.user.email}</strong><span>{session.user.is_anonymous ? "Guest session · V0.5.0" : "Signed in · V0.5.0"}</span></div><button onClick={signOut} title="Sign out"><LogOut size={13} /></button></div>
     </aside>
     <main className="main-area">
-      <header className="topbar"><div className="breadcrumbs"><span>Workspace</span><ChevronRight size={11} /><strong>{page === "chat" ? activeAgent?.name ?? "Chat" : page === "credits" ? "MATRIX Credits" : page[0].toUpperCase() + page.slice(1)}</strong></div><div className="topbar-actions"><div className="local-mode"><i /> ACCOUNT CONNECTED</div><button className="top-credits" onClick={() => setPage("credits")}><Coins size={12} /><strong>{credits ?? "—"}</strong><span>CRD</span></button></div></header>
+      <header className="topbar"><div className="breadcrumbs"><span>Workspace</span><ChevronRight size={11} /><strong>{page === "chat" ? activeAgent?.name ?? "Chat" : page === "credits" ? "MATRIX Credits" : page[0].toUpperCase() + page.slice(1)}</strong></div><div className="topbar-actions"><div className="local-mode"><i /> {session.user.is_anonymous ? "GUEST MODE" : "ACCOUNT CONNECTED"}</div>{session.user.is_anonymous ? <div className="top-credits"><Users size={12} /><strong>{guestRemaining}/10</strong><span>LEFT</span></div> : <button className="top-credits" onClick={() => setPage("credits")}><Coins size={12} /><strong>{credits ?? "—"}</strong><span>CRD</span></button>}</div></header>
       <div className={page === "chat" ? "page-content chat-content" : "page-content"}>
         {page === "agents" && <>
           {title("Your agents.", "Give each assistant its own name, purpose, and personality.", createButton)}
@@ -216,14 +241,14 @@ export default function NetworkApp() {
           <div className="chat-topline"><div className="chat-title-block"><div className="eyebrow">CONVERSATION</div><h1>{activeAgent.name}</h1><p>{activeAgent.personality}</p></div><div className="chat-top-actions"><select className="model-select" aria-label="Choose MATRIX model" value={model} onChange={e => setModel(e.target.value)}>{MODELS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select><button className="icon-button" onClick={() => setPage("settings")} title="Settings"><Settings2 size={12} /></button></div></div>
           <div className="chat-layout chat-first-layout"><section className="chat-panel panel"><div className="chat-messages">{chat.length === 0 ? <div className="chat-welcome"><div className="avatar welcome-avatar">{initials(activeAgent.name)}</div><h3>Hi, I'm {activeAgent.name}.</h3><p>{activeAgent.purpose}</p><span>Powered by {selectedModel.name}. Choose a model above and say hello.</span></div> : chat.map(message => <div className={message.role === "user" ? "message-row user-message" : "message-row agent-message"} key={message.id}>{message.role !== "user" && <div className="message-avatar">{initials(activeAgent.name)}</div>}<div className="bubble"><span>{message.role === "user" ? "YOU" : activeAgent.name.toUpperCase()}</span><p>{message.content}</p></div></div>)}{sending && <div className="typing-row"><div className="message-avatar">{initials(activeAgent.name)}</div><span>{activeAgent.name} is thinking…</span></div>}</div>
             {chatError && <div className="chat-error">{chatError}</div>}
-            <form className="composer" onSubmit={send}><input value={draft} onChange={e => setDraft(e.target.value)} placeholder={credits === 0 ? "No MATRIX Credits remaining…" : "Message " + activeAgent.name + "…"} aria-label="Message" /><button className="voice-button" type="button" disabled title="Voice is planned for a later version"><Mic size={13} /></button><button className="send-button" type="submit" disabled={!draft.trim() || sending || credits === null || credits < 1} aria-label="Send message"><Send size={13} /></button></form>
-            <div className="chat-footnote"><LockKeyhole size={10} /> {selectedModel.name} · 1 CRD per successful reply · {credits ?? "—"} CRD available</div>
+            <form className="composer" onSubmit={send}><input value={draft} onChange={e => setDraft(e.target.value)} placeholder={session.user.is_anonymous && guestRemaining === 0 ? "Guest limit reached…" : !session.user.is_anonymous && credits === 0 ? "No MATRIX Credits remaining…" : "Message " + activeAgent.name + "…"} aria-label="Message" /><button className="voice-button" type="button" disabled title="Voice is planned for a later version"><Mic size={13} /></button><button className="send-button" type="submit" disabled={!draft.trim() || sending || (session.user.is_anonymous ? guestRemaining < 1 : credits === null || credits < 1)} aria-label="Send message"><Send size={13} /></button></form>
+            <div className="chat-footnote"><LockKeyhole size={10} /> {selectedModel.name} · {session.user.is_anonymous ? guestRemaining + " guest messages remaining · 10 per 24 hours" : "1 CRD per successful reply · " + (credits ?? "—") + " CRD available"}</div>
           </section><aside className="agent-info panel"><div className="eyebrow">ABOUT THIS AGENT</div><div className="avatar profile-avatar">{initials(activeAgent.name)}</div><h3>{activeAgent.name}</h3><span className="personality-tag">{activeAgent.personality}</span><div className="info-divider" /><div className="eyebrow">PURPOSE</div><p>{activeAgent.purpose}</p><div className="info-divider" /><div className="permission-mini"><ShieldCheck size={12} /><span><strong>Device access off</strong><small>Chat only. No files, email, or Windows controls.</small></span></div></aside></div>
         </> : <div className="chat-empty panel"><h3>Your chat space is ready.</h3><p>Create an agent to start a conversation.</p><button className="button primary" onClick={() => setCreateOpen(true)}><Plus size={13} /> Create agent</button></div>)}
         {page === "settings" && <>
           {title("Your account.", "Manage your MATRIX account and choose a model.")}
           <div className="settings-grid">
-            <section className="panel settings-panel"><div className="panel-head"><div><div className="eyebrow">ACCOUNT</div><h3>Personal workspace</h3></div><span className="connected-tag">SIGNED IN</span></div><div className="account-details"><div className="account-avatar">{initials(session.user.user_metadata?.display_name || session.user.email || "M")}</div><div><strong>{session.user.user_metadata?.display_name || "MATRIX member"}</strong><span>{session.user.email}</span></div></div><div className="account-balance"><span className="eyebrow">AVAILABLE BALANCE</span><strong>{credits ?? "—"} <small>CRD</small></strong><p>New accounts receive 300 CRD once. One successful AI response costs 1 CRD.</p></div>{creditsError && <div className="provider-alert error-alert">{creditsError}</div>}<button className="button quiet" onClick={signOut}><LogOut size={12} /> Sign out</button></section>
+            <section className="panel settings-panel"><div className="panel-head"><div><div className="eyebrow">ACCOUNT</div><h3>Personal workspace</h3></div><span className="connected-tag">{session.user.is_anonymous ? "GUEST" : "SIGNED IN"}</span></div><div className="account-details"><div className="account-avatar">{initials(session.user.user_metadata?.display_name || session.user.email || "M")}</div><div><strong>{session.user.is_anonymous ? "Guest session" : session.user.user_metadata?.display_name || "MATRIX member"}</strong><span>{session.user.is_anonymous ? "No email or password connected" : session.user.email}</span></div></div>{session.user.is_anonymous ? <div className="account-balance"><span className="eyebrow">GUEST QUOTA</span><strong>{guestRemaining} <small>/ 10 MESSAGES</small></strong><p>10 messages per rolling 24 hours. No CRD is issued or charged.</p></div> : <div className="account-balance"><span className="eyebrow">AVAILABLE BALANCE</span><strong>{credits ?? "—"} <small>CRD</small></strong><p>New accounts receive 300 CRD once. One successful AI response costs 1 CRD.</p></div>}{creditsError && <div className="provider-alert error-alert">{creditsError}</div>}<button className="button quiet" onClick={signOut}><LogOut size={12} /> Sign out</button></section>
             <section className="panel settings-panel"><div className="panel-head"><div><div className="eyebrow">MODEL PREFERENCE</div><h3>Choose your MATRIX model</h3></div><span className="local-tag">2 MODELS</span></div><div className="model-choice-list">{MODELS.map(m => <button key={m.id} className={model === m.id ? "model-choice selected" : "model-choice"} onClick={() => setModel(m.id)}><span className="model-choice-radio">{model === m.id ? "●" : "○"}</span><span className="model-choice-copy"><strong>{m.name}</strong><small>{m.info}</small><span>{m.id === MODELS[0].id ? "Lightweight everyday model." : "Larger model for more involved chats."}</span></span></button>)}</div><div className="settings-footnote">AGOORA's model publisher states prompts and outputs may be retained and used to improve models. Free routes can also be rate-limited. Never send passwords, secrets, or sensitive personal information.</div></section>
           </div>
           <div className="notice"><ShieldCheck size={13} /><span><strong>AI connection: Automatic.</strong> MATRIX LABS connects to its secured chat service without asking you for an API key. Your key stays on the server, and you can switch between AGOORA 2.0 and MATRIX AI 1.0 above. Only chat instructions and recent messages are sent to the selected model service.</span></div>
