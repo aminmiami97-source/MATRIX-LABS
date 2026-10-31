@@ -185,7 +185,8 @@ Deno.serve(async (request) => {
         "X-Title": "MATRIX LABS",
       },
       body: JSON.stringify({
-        model: modelId,
+        // MATRIX AI 1.0 is a product-level model identity. OpenRouter selects an available free model for each request.
+        model: modelId === "thinkingmachines/inkling-small:free" ? "openrouter/free" : modelId,
         messages: [
           { role: "system", content: systemPrompt },
           ...messages,
