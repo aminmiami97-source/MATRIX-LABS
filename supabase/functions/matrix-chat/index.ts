@@ -95,7 +95,8 @@ Deno.serve(async (request) => {
   if (authError || !authData.user) {
     return reply(401, { error: "Your session expired. Sign in again." });
   }
-  if (!authData.user.email_confirmed_at) {
+  const isGuest = authData.user.is_anonymous === true;
+  if (!isGuest && !authData.user.email_confirmed_at) {
     return reply(403, { error: "Verify your email before using MATRIX AI." });
   }
 
@@ -144,6 +145,9 @@ Deno.serve(async (request) => {
 
   if (reserveError) {
     const message = reserveError.message ?? "";
+    if (message.includes("guest_daily_limit")) {
+      return reply(429, { error: "You've used all 10 guest messages for the last 24 hours. Create an account for the full MATRIX experience." });
+    }
     if (message.includes("insufficient_credits")) {
       return reply(402, { error: "You have used your available MATRIX Credits." });
     }
@@ -161,6 +165,7 @@ Deno.serve(async (request) => {
   }
 
   const refund = async () => {
+    if (isGuest) return;
     const { error } = await admin.rpc("matrix_refund_chat_credit", {
       p_user_id: authData.user.id,
       p_request_id: requestId,
@@ -268,6 +273,8 @@ Deno.serve(async (request) => {
   return reply(200, {
     content,
     modelId,
-    balance: reservation.balance,
+    isGuest,
+    balance: isGuest ? null : reservation.balance,
+    guestRemaining: isGuest ? reservation.guest_remaining : null,
   });
 });
