@@ -202,12 +202,42 @@ Deno.serve(async (request) => {
   }
 
   if (!upstream.ok) {
+    // Capture only sanitized provider diagnostics. Never log request headers, credentials, or chat content.
+    const upstreamErrorText = await upstream.text().catch(() => "");
+    let providerCode = "";
+    let providerMessage = "";
+    try {
+      const parsed = JSON.parse(upstreamErrorText) as Record<string, unknown>;
+      const errorObject = (parsed.error && typeof parsed.error === "object")
+        ? parsed.error as Record<string, unknown>
+        : parsed;
+      if (typeof errorObject.code === "string" || typeof errorObject.code === "number") {
+        providerCode = String(errorObject.code).slice(0, 80);
+      }
+      if (typeof errorObject.message === "string") {
+        providerMessage = errorObject.message
+          .replace(/(Bearer\\s+|sk-or-v1-|sk-[A-Za-z0-9_-]{8,})[^\\s"']*/gi, "[REDACTED]")
+          .replace(/[\\r\\n\\t]+/g, " ")
+          .slice(0, 240);
+      }
+    } catch {
+      // Keep diagnostics limited to the HTTP status when the provider response is not JSON.
+    }
+    console.error("MATRIX upstream rejected request", {
+      status: upstream.status,
+      code: providerCode,
+      message: providerMessage,
+    });
+
     await refund();
     if (upstream.status === 429) {
       return reply(429, { error: "The free model service is rate-limited right now. Your credit has been returned." });
     }
-    if (upstream.status === 401 || upstream.status === 403) {
-      return reply(503, { error: "MATRIX AI service authentication needs attention. Your credit has been returned." });
+    if (upstream.status === 401) {
+      return reply(503, { error: "OpenRouter rejected the server API key (401). Check MATRIX_AI_ROUTER_KEY in Supabase Function Secrets. Your credit has been returned." });
+    }
+    if (upstream.status === 403) {
+      return reply(503, { error: "OpenRouter denied this request (403). Check account access and free-model availability. Your credit has been returned." });
     }
     return reply(502, { error: "The selected model is temporarily unavailable. Your credit has been returned." });
   }
