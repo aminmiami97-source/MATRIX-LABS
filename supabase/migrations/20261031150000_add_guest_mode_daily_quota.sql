@@ -37,7 +37,7 @@ begin
   select count(*) into v_global_minute from public.matrix_usage_events where created_at > now()-interval '1 minute';
   if v_global_minute >= 15 then raise exception 'shared_rate_limit'; end if;
   select count(*) into v_user_minute from public.matrix_usage_events where user_id=p_user_id and created_at > now()-interval '1 minute';
-  if v_user_minute >= 4 then raise exception 'user_rate_limit'; end if;
+  if v_user_minute >= 10 then raise exception 'user_rate_limit'; end if;
   if v_is_guest then
     select count(*) into v_guest_day from public.matrix_usage_events where user_id=p_user_id and created_at > now()-interval '24 hours';
     if v_guest_day >= 10 then raise exception 'guest_daily_limit'; end if;
