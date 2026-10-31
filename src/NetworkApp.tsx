@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { createClient, type Session } from "@supabase/supabase-js";
-import { ArrowUpRight, ChevronRight, Coins, Command, FileText, FolderOpen, LockKeyhole, LogOut, MessageCircle, Mic, Plus, Send, Settings2, ShieldCheck, Users, X } from "lucide-react";
+import { ArrowUpRight, ChevronRight, Coins, Command, Copy, FileText, FolderOpen, LockKeyhole, LogOut, MessageCircle, Mic, Plus, RefreshCw, Send, Settings2, ShieldCheck, Users, X } from "lucide-react";
 
 const URL = import.meta.env.VITE_SUPABASE_URL?.trim() ?? "";
 const PUBLIC_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? "";
@@ -99,7 +99,7 @@ export default function NetworkApp() {
   const [localDataReady, setLocalDataReady] = useState(false);
   const [model, setModel] = useState<string>(MODELS[0].id);
   const [draft, setDraft] = useState("");
-  const [sending, setSending] = useState(false);
+  const [sending, setSending] = useState(false);\n  const [regeneratingId, setRegeneratingId] = useState<string | null>(null);\n  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [chatError, setChatError] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [agentName, setAgentName] = useState("");
@@ -234,6 +234,56 @@ export default function NetworkApp() {
     } finally { setSending(false); }
   }
 
+  async function regenerate(messageId: string) {
+    if (!activeAgent || !db || !session || sending || regeneratingId) return;
+    const index = chat.findIndex(m => m.id === messageId);
+    if (index < 1 || chat[index].role !== "assistant" || chat[index - 1].role !== "user") return;
+    const isGuest = session.user.is_anonymous;
+    if (!isGuest && (!credits || credits < 1)) { setChatError("You have no MATRIX Credits remaining."); return; }
+    if (isGuest && guestRemaining < 1) { setChatError("Guest limit reached. Create an account for more messages."); return; }
+    const priorMessages = chat.slice(0, index).map(m => ({ role: m.role, content: m.content })).slice(-24);
+    const systemPrompt = [
+      "You are " + activeAgent.name + ", a personal assistant in MATRIX LABS.",
+      "Personality: " + activeAgent.personality + ".",
+      "Purpose: " + activeAgent.purpose,
+      "Chat-only release: no tools, file access, email access, or shell access.",
+      "Never claim to have changed the computer or performed an external action."
+    ].join("\\n");
+    setRegeneratingId(messageId); setChatError("");
+    try {
+      const { data, error } = await db.functions.invoke<{ content: string; balance: number | null; guestRemaining?: number | null }>("matrix-chat", {
+        body: { requestId: crypto.randomUUID(), modelId: model, systemPrompt, messages: priorMessages }
+      });
+      if (error) {
+        let message = error.message;
+        if (error.context instanceof Response) {
+          try { const body = await error.context.json() as { error?: string }; if (body.error) message = body.error; } catch { /* keep SDK error */ }
+        }
+        throw new Error(message || "MATRIX AI regeneration failed.");
+      }
+      if (!data || typeof data.content !== "string") throw new Error("MATRIX AI returned an invalid response.");
+      if (isGuest) { if (typeof data.guestRemaining === "number") setGuestRemaining(data.guestRemaining); }
+      else { if (typeof data.balance !== "number") throw new Error("Invalid credit balance."); setCredits(data.balance); }
+      setMessages(current => {
+        const list = [...(current[activeAgent.id] ?? [])];
+        const target = list.findIndex(m => m.id === messageId);
+        if (target >= 0) list[target] = { ...list[target], content: data.content };
+        return { ...current, [activeAgent.id]: list };
+      });
+    } catch (error) {
+      setChatError(error instanceof Error ? error.message : String(error));
+      if (!isGuest) await refreshCredits();
+    } finally { setRegeneratingId(null); }
+  }
+
+  async function copyMessage(message: Message) {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopiedId(message.id);
+      window.setTimeout(() => setCopiedId(current => current === message.id ? null : current), 1600);
+    } catch { setChatError("Could not copy this response. Check clipboard permission."); }
+  }
+
   function title(text: string, desc: string, action?: ReactNode) {
     return <div className="page-heading"><div><div className="eyebrow">MATRIX LABS</div><h1>{text}</h1><p>{desc}</p></div>{action}</div>;
   }
@@ -289,7 +339,7 @@ export default function NetworkApp() {
         </>}
         {page === "chat" && (activeAgent ? <>
           <div className="chat-topline"><div className="chat-title-block"><div className="eyebrow">CONVERSATION</div><h1>{activeAgent.name}</h1><p>{activeAgent.personality}</p></div><div className="chat-top-actions"><select className="model-select" aria-label="Choose MATRIX model" value={model} onChange={e => setModel(e.target.value)}>{MODELS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select><button className="icon-button" onClick={() => setPage("settings")} title="Settings"><Settings2 size={12} /></button></div></div>
-          <div className="chat-layout chat-first-layout"><section className="chat-panel panel"><div className="chat-messages">{chat.length === 0 ? <div className="chat-welcome"><div className="avatar welcome-avatar">{initials(activeAgent.name)}</div><h3>Hi, I'm {activeAgent.name}.</h3><p>{activeAgent.purpose}</p><span>Powered by {selectedModel.name}. Choose a model above and say hello.</span></div> : chat.map(message => <div className={message.role === "user" ? "message-row user-message" : "message-row agent-message"} key={message.id}>{message.role !== "user" && <div className="message-avatar">{initials(activeAgent.name)}</div>}<div className="bubble"><span>{message.role === "user" ? "YOU" : activeAgent.name.toUpperCase()}</span><FormattedMessage content={message.content} /></div></div>)}{sending && <div className="typing-row"><div className="message-avatar">{initials(activeAgent.name)}</div><span>{activeAgent.name} is thinking…</span></div>}</div>
+          <div className="chat-layout chat-first-layout"><section className="chat-panel panel"><div className="chat-messages">{chat.length === 0 ? <div className="chat-welcome"><div className="avatar welcome-avatar">{initials(activeAgent.name)}</div><h3>Hi, I'm {activeAgent.name}.</h3><p>{activeAgent.purpose}</p><span>Powered by {selectedModel.name}. Choose a model above and say hello.</span></div> : chat.map(message => <div className={message.role === "user" ? "message-row user-message" : "message-row agent-message"} key={message.id}>{message.role !== "user" && <div className="message-avatar">{initials(activeAgent.name)}</div>}<div className="bubble"><span>{message.role === "user" ? "YOU" : activeAgent.name.toUpperCase()}</span><FormattedMessage content={message.content} />{message.role === "assistant" && <div className="message-actions"><button type="button" className="message-action" onClick={() => void copyMessage(message)} title="Copy response" aria-label="Copy response"><Copy size={12} /><span>{copiedId === message.id ? "Copied" : "Copy"}</span></button><button type="button" className="message-action" onClick={() => void regenerate(message.id)} disabled={sending || regeneratingId !== null} title="Regenerate response" aria-label="Regenerate response"><RefreshCw size={12} className={regeneratingId === message.id ? "spin" : ""} /><span>{regeneratingId === message.id ? "Regenerating…" : "Regenerate"}</span></button></div>}</div></div>)}{sending && <div className="typing-row"><div className="message-avatar">{initials(activeAgent.name)}</div><span>{activeAgent.name} is thinking…</span></div>}</div>
             {chatError && <div className="chat-error">{chatError}</div>}
             <form className="composer" onSubmit={send}><input value={draft} onChange={e => setDraft(e.target.value)} placeholder={session.user.is_anonymous && guestRemaining === 0 ? "Guest limit reached…" : !session.user.is_anonymous && credits === 0 ? "No MATRIX Credits remaining…" : "Message " + activeAgent.name + "…"} aria-label="Message" /><button className="voice-button" type="button" disabled title="Voice is planned for a later version"><Mic size={13} /></button><button className="send-button" type="submit" disabled={!draft.trim() || sending || (session.user.is_anonymous ? guestRemaining < 1 : credits === null || credits < 1)} aria-label="Send message"><Send size={13} /></button></form>
             <div className="chat-footnote"><LockKeyhole size={10} /> {selectedModel.name} · {session.user.is_anonymous ? guestRemaining + " guest messages remaining · 10 per 24 hours" : "1 CRD per successful reply · " + (credits ?? "—") + " CRD available"}</div>
