@@ -39,8 +39,8 @@ jobs:
       - name: Build MATRIX LABS
         run: npm run tauri:build
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_URL: https://ndpgjqowvqabozvfgeab.supabase.co
+          VITE_SUPABASE_ANON_KEY: sb_publishable_mEiLwO1VIKnBUEs8NVD2uw_sdYYbrsN
       - name: Upload NSIS installer
         uses: actions/upload-artifact@v4
         with:
