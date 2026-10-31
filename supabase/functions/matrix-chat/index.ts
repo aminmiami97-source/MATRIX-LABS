@@ -153,9 +153,6 @@ Deno.serve(async (request) => {
     if (message.includes("shared_rate_limit") || message.includes("user_rate_limit")) {
       return reply(429, { error: "MATRIX AI is receiving requests too quickly. Wait a moment and try again." });
     }
-    if (message.includes("user_daily_limit")) {
-      return reply(429, { error: "Your daily chat allowance has been reached. Try again tomorrow." });
-    }
     return reply(503, { error: "MATRIX AI could not reserve a credit. Try again shortly." });
   }
 
