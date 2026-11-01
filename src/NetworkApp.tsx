@@ -294,7 +294,7 @@ export default function NetworkApp() {
       if (file.size > 5 * 1024 * 1024) { setChatError(file.name + " exceeds the 5 MB per-file limit."); continue; }
       if (attachments.length + valid.length >= 8) { setChatError("You can attach up to 8 files per message."); break; }
       let extractedText = "";
-      const textLike = /^(text\\/|application\\/(json|xml|csv|javascript))/i.test(file.type) || /\\.(txt|md|csv|json|xml|html|css|js|ts|log)$/i.test(file.name);
+      const textLike = /^(text\/|application\\/(json|xml|csv|javascript))/i.test(file.type) || /\.(txt|md|csv|json|xml|html|css|js|ts|log)$/i.test(file.name);
       if (textLike) {
         try { extractedText = (await file.text()).slice(0, Math.min(5000, textBudget)); textBudget -= extractedText.length; }
         catch { extractedText = ""; }
@@ -442,7 +442,7 @@ export default function NetworkApp() {
     event.preventDefault();
     const text = draft.trim();
     if ((!text && attachments.length === 0) || !activeAgent || !db || !session || sending) return;
-    const attachmentContext = attachments.map(a => a.extractedText ? "\\n\\n[Attached file: " + a.file.name + "]\\n" + a.extractedText : "\\n\\n[Attached file: " + a.file.name + " (" + a.file.type + ", " + a.file.size + " bytes). The file is attached, but this format is not text-extracted in this release.]").join("");
+    const attachmentContext = attachments.map(a => a.extractedText ? "\n\n[Attached file: " + a.file.name + "]\n" + a.extractedText : "\n\n[Attached file: " + a.file.name + " (" + a.file.type + ", " + a.file.size + " bytes). The file is attached, but this format is not text-extracted in this release.]").join("");
     const userContent = (text || "Please review the attached file(s).") + attachmentContext;
     const isGuest = session.user.is_anonymous;
     if (!isGuest && (!credits || credits < 1)) { setChatError("You have no MATRIX Credits remaining."); return; }
