@@ -2,7 +2,7 @@ import { Fragment, useEffect, useRef, useState, type FormEvent, type ReactNode }
 import { createClient, type Session } from "@supabase/supabase-js";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
-import { ArrowUpRight, ChevronRight, Coins, Command, Copy, FileText, FolderOpen, LockKeyhole, LogOut, Mail, MessageCircle, Mic, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, RefreshCw, Send, Settings2, ShieldCheck, Users, X } from "lucide-react";
+import { ArrowUpRight, CalendarDays, ChevronRight, Coins, Command, Copy, FileText, FolderOpen, LockKeyhole, LogOut, Mail, MessageCircle, Mic, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, RefreshCw, Send, Settings2, ShieldCheck, Users, X } from "lucide-react";
 
 const URL = import.meta.env.VITE_SUPABASE_URL?.trim() ?? "";
 const PUBLIC_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? "";
@@ -612,8 +612,8 @@ export default function NetworkApp() {
   </section></div>;
 
   return <div className="app-shell">
-    <aside className="sidebar">
-      <div className="brand"><div className="brand-mark"><Command size={17} /></div><div><strong>MATRIX</strong><span>LABS</span></div></div>
+    <aside className={sidebarCollapsed ? "sidebar collapsed" : "sidebar"}>
+      <div className="brand"><div className="brand-mark"><Command size={17} /></div><div><strong>MATRIX</strong><span>LABS</span></div><button className="sidebar-toggle" type="button" onClick={() => setSidebarCollapsed(value => !value)} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}>{sidebarCollapsed ? <PanelLeftOpen size={12} /> : <PanelLeftClose size={12} />}</button></div>
       <div className="workspace-switch"><div className="workspace-avatar">{initials(session.user.user_metadata?.display_name || session.user.email || "M")}</div><div><strong>{session.user.user_metadata?.display_name || "MATRIX member"}</strong><span>Personal workspace</span></div><ChevronRight size={11} /></div>
       <div className="nav-label">MESSAGES</div>
       <nav>{navItems.map(item => { const Icon = item.icon; return <button key={item.id} className={page === item.id ? "nav-item active" : "nav-item"} onClick={() => setPage(item.id)}><Icon size={14} /><span>{item.label}</span>{item.id === "agents" && agents.length > 0 && <small>{agents.length}</small>}</button>; })}</nav>
@@ -668,6 +668,16 @@ export default function NetworkApp() {
               </form>
             </section>}
           </>}
+          <div className="plugin-coming-grid">
+            <section className="plugin-card panel plugin-coming-card">
+              <div className="plugin-card-head"><div className="plugin-brand-icon"><FileText size={22} /></div><div className="plugin-card-title"><div className="eyebrow">PRODUCTIVITY · GOOGLE</div><h3>Google Docs</h3><p>Create, read, and edit documents from your MATRIX LABS workspace.</p></div><span className="coming-tag">COMING SOON</span></div>
+              <div className="plugin-scope"><LockKeyhole size={13} /><span>Not connected yet. Document access will require your permission when this integration launches.</span></div>
+            </section>
+            <section className="plugin-card panel plugin-coming-card">
+              <div className="plugin-card-head"><div className="plugin-brand-icon"><CalendarDays size={22} /></div><div className="plugin-card-title"><div className="eyebrow">PRODUCTIVITY · GOOGLE</div><h3>Google Calendar</h3><p>View your schedule and manage events with your approval.</p></div><span className="coming-tag">COMING SOON</span></div>
+              <div className="plugin-scope"><LockKeyhole size={13} /><span>Not connected yet. Calendar permissions and event controls will be explained before launch.</span></div>
+            </section>
+          </div>
           {gmailError && <div className="provider-alert error-alert">{gmailError}</div>}
           {gmailNotice && <div className="provider-alert success-alert">{gmailNotice}</div>}
         </>}
