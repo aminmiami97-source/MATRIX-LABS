@@ -18,8 +18,7 @@
         "height": 920,
         "minWidth": 980,
         "minHeight": 680,
-        "center": true,
-        "icon": "icons/icon.ico"
+        "center": true
       }
     ],
     "security": {
