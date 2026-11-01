@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { createClient, type Session } from "@supabase/supabase-js";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
@@ -89,6 +89,7 @@ export default function NetworkApp() {
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
+  const resetRequestInFlight = useRef(false);
   const [authError, setAuthError] = useState("");
   const [authNote, setAuthNote] = useState("");
   const [forgotOpen, setForgotOpen] = useState(false);
@@ -281,7 +282,8 @@ export default function NetworkApp() {
   }
 
   async function sendPasswordReset() {
-    if (!db || authBusy || !email.trim()) return;
+    if (!db || resetRequestInFlight.current || !email.trim()) return;
+    resetRequestInFlight.current = true;
     setAuthBusy(true); setAuthError(""); setAuthNote("");
     try {
       const { error } = await db.auth.resetPasswordForEmail(email.trim(), {
@@ -291,7 +293,10 @@ export default function NetworkApp() {
       setAuthNote("If an account exists for that email, a password reset link has been sent. Open it on this device to continue in MATRIX LABS.");
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : "Could not send the password reset email.");
-    } finally { setAuthBusy(false); }
+    } finally {
+      resetRequestInFlight.current = false;
+      setAuthBusy(false);
+    }
   }
 
   async function saveNewPassword(event: FormEvent<HTMLFormElement>) {
