@@ -289,13 +289,14 @@ export default function NetworkApp() {
     if (!files) return;
     const incoming = Array.from(files);
     const valid: Attachment[] = [];
+    let textBudget = Math.max(0, 9000 - attachments.reduce((sum, item) => sum + item.extractedText.length, 0));
     for (const file of incoming) {
       if (file.size > 5 * 1024 * 1024) { setChatError(file.name + " exceeds the 5 MB per-file limit."); continue; }
       if (attachments.length + valid.length >= 8) { setChatError("You can attach up to 8 files per message."); break; }
       let extractedText = "";
       const textLike = /^(text\\/|application\\/(json|xml|csv|javascript))/i.test(file.type) || /\\.(txt|md|csv|json|xml|html|css|js|ts|log)$/i.test(file.name);
       if (textLike) {
-        try { extractedText = (await file.text()).slice(0, 30000); }
+        try { extractedText = (await file.text()).slice(0, Math.min(5000, textBudget)); textBudget -= extractedText.length; }
         catch { extractedText = ""; }
       }
       valid.push({ id: crypto.randomUUID(), file, extractedText });
