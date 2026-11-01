@@ -319,7 +319,20 @@ export default function NetworkApp() {
       await openUrl(data.url);
       setAuthNote("Google opened in your browser. Finish signing in there; MATRIX LABS will open automatically.");
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : "Could not start Google sign-in.");
+      console.error("MATRIX LABS Google sign-in failed:", error);
+      let detail = "Unknown error";
+      if (error instanceof Error) detail = error.message;
+      else if (typeof error === "string") detail = error;
+      else if (error && typeof error === "object") {
+        const value = error as Record<string, unknown>;
+        if (typeof value.message === "string") detail = value.message;
+        else if (typeof value.error_description === "string") detail = value.error_description;
+        else if (typeof value.error === "string") detail = value.error;
+        else {
+          try { detail = JSON.stringify(error); } catch { /* retain fallback */ }
+        }
+      }
+      setAuthError("Google sign-in could not start: " + detail);
     } finally { setAuthBusy(false); }
   }
 
