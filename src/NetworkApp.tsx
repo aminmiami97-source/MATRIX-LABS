@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { createClient, type Session } from "@supabase/supabase-js";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { ArrowUpRight, ChevronRight, Coins, Command, Copy, FileText, FolderOpen, LockKeyhole, LogOut, Mail, MessageCircle, Mic, Plus, RefreshCw, Send, Settings2, ShieldCheck, Users, X } from "lucide-react";
 
 const URL = import.meta.env.VITE_SUPABASE_URL?.trim() ?? "";
@@ -90,6 +91,10 @@ export default function NetworkApp() {
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState("");
   const [authNote, setAuthNote] = useState("");
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [recoveryMode, setRecoveryMode] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
 
   const [page, setPage] = useState<Page>("chat");
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -124,6 +129,40 @@ export default function NetworkApp() {
     void db.auth.getSession().then(({ data }) => { if (active) { setSession(data.session); setAuthReady(true); } });
     const { data } = db.auth.onAuthStateChange((_event, current) => setSession(current));
     return () => { active = false; data.subscription.unsubscribe(); };
+  }, []);
+
+  useEffect(() => {
+    if (!db) return;
+    let active = true;
+    const handleRecoveryUrl = async (rawUrl: string) => {
+      try {
+        const incoming = new URL(rawUrl);
+        const params = new URLSearchParams(incoming.hash.replace(/^#/, ""));
+        const accessToken = params.get("access_token");
+        const refreshToken = params.get("refresh_token");
+        const type = params.get("type");
+        if (type !== "recovery" || !accessToken || !refreshToken) return;
+        const { error } = await db.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+        if (error) throw error;
+        if (active) {
+          setRecoveryMode(true);
+          setForgotOpen(false);
+          setAuthError("");
+          setAuthNote("");
+        }
+      } catch (error) {
+        if (active) setAuthError(error instanceof Error ? error.message : "This password reset link could not be verified. Request a new one.");
+      }
+    };
+    let unlisten: (() => void) | undefined;
+    void onOpenUrl(urls => { for (const url of urls) void handleRecoveryUrl(url); }).then(fn => {
+      if (active) unlisten = fn;
+      else fn();
+    }).catch(() => undefined);
+    void getCurrent().then(urls => {
+      if (active && urls) for (const url of urls) void handleRecoveryUrl(url);
+    }).catch(() => undefined);
+    return () => { active = false; unlisten?.(); };
   }, []);
 
   useEffect(() => {
@@ -239,6 +278,38 @@ export default function NetworkApp() {
       }
     } catch (error) { setAuthError(error instanceof Error ? error.message : "Could not sign in."); }
     finally { setAuthBusy(false); }
+  }
+
+  async function sendPasswordReset() {
+    if (!db || authBusy || !email.trim()) return;
+    setAuthBusy(true); setAuthError(""); setAuthNote("");
+    try {
+      const { error } = await db.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: "com.matrixlabs.desktop://auth/reset-password"
+      });
+      if (error) throw error;
+      setAuthNote("If an account exists for that email, a password reset link has been sent. Open it on this device to continue in MATRIX LABS.");
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Could not send the password reset email.");
+    } finally { setAuthBusy(false); }
+  }
+
+  async function saveNewPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!db || authBusy) return;
+    if (newPassword.length < 8) { setAuthError("Use at least 8 characters for your new password."); return; }
+    if (newPassword !== confirmNewPassword) { setAuthError("The passwords do not match."); return; }
+    setAuthBusy(true); setAuthError(""); setAuthNote("");
+    try {
+      const { error } = await db.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      await db.auth.signOut();
+      setRecoveryMode(false); setMode("sign_in"); setForgotOpen(false);
+      setPassword(""); setNewPassword(""); setConfirmNewPassword("");
+      setAuthNote("Password updated. Sign in with your new password.");
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Could not update your password. Request a fresh reset link.");
+    } finally { setAuthBusy(false); }
   }
 
   async function signOut() { await db?.auth.signOut(); setPage("chat"); }
@@ -369,23 +440,40 @@ export default function NetworkApp() {
 
   if (!authReady) return <div className="auth-shell"><section className="auth-card auth-loading"><div className="brand-mark"><Command size={18} /></div><h2>Connecting MATRIX LABS…</h2><p>Restoring your secure session.</p></section></div>;
 
+  if (recoveryMode) return <div className="auth-shell"><section className="auth-card">
+    <div className="brand auth-brand"><div className="brand-mark"><Command size={17} /></div><div><strong>MATRIX</strong><span>LABS</span></div></div>
+    <div className="eyebrow">ACCOUNT RECOVERY</div>
+    <h1>Set a new password.</h1>
+    <p>Your reset link is verified. Choose a new password for your MATRIX LABS account.</p>
+    <form className="auth-form" onSubmit={saveNewPassword}>
+      <label htmlFor="ml-new-password">New password</label>
+      <input id="ml-new-password" className="field" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} minLength={8} autoComplete="new-password" required />
+      <label htmlFor="ml-confirm-password">Confirm new password</label>
+      <input id="ml-confirm-password" className="field" type="password" value={confirmNewPassword} onChange={e => setConfirmNewPassword(e.target.value)} minLength={8} autoComplete="new-password" required />
+      {authError && <div className="provider-alert error-alert">{authError}</div>}
+      <button className="button primary auth-submit" type="submit" disabled={authBusy || newPassword.length < 8 || confirmNewPassword.length < 8}>{authBusy ? "Updating password…" : "Update password"}</button>
+    </form>
+  </section></div>;
+
   if (!session) return <div className="auth-shell"><section className="auth-card">
     <div className="brand auth-brand"><div className="brand-mark"><Command size={17} /></div><div><strong>MATRIX</strong><span>LABS</span></div></div>
     <div className="eyebrow">MATRIX NETWORK</div>
-    <h1>{mode === "sign_up" ? "Create your account." : "Welcome back."}</h1>
-    <p>{mode === "sign_up" ? "Join MATRIX LABS and receive 300 starter MATRIX Credits." : "Sign in to continue your conversations."}</p>
-    <form className="auth-form" onSubmit={authenticate}>
-      {mode === "sign_up" && <><label htmlFor="ml-name">Display name</label><input id="ml-name" className="field" value={displayName} onChange={e => setDisplayName(e.target.value)} maxLength={48} autoComplete="name" required /></>}
+    <h1>{forgotOpen ? "Reset your password." : mode === "sign_up" ? "Create your account." : "Welcome back."}</h1>
+    <p>{forgotOpen ? "Enter your account email. We'll send you a secure reset link that opens MATRIX LABS." : mode === "sign_up" ? "Join MATRIX LABS and receive 300 starter MATRIX Credits." : "Sign in to continue your conversations."}</p>
+    <form className="auth-form" onSubmit={forgotOpen ? (event) => { event.preventDefault(); void sendPasswordReset(); } : authenticate}>
+      {!forgotOpen && mode === "sign_up" && <><label htmlFor="ml-name">Display name</label><input id="ml-name" className="field" value={displayName} onChange={e => setDisplayName(e.target.value)} maxLength={48} autoComplete="name" required /></>}
       <label htmlFor="ml-email">Email</label><input id="ml-email" className="field" type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" required />
-      <label htmlFor="ml-password">Password</label><input id="ml-password" className="field" type="password" value={password} onChange={e => setPassword(e.target.value)} minLength={8} autoComplete={mode === "sign_up" ? "new-password" : "current-password"} required />
+      {!forgotOpen && <><label htmlFor="ml-password">Password</label><input id="ml-password" className="field" type="password" value={password} onChange={e => setPassword(e.target.value)} minLength={8} autoComplete={mode === "sign_up" ? "new-password" : "current-password"} required /></>}
       {authError && <div className="provider-alert error-alert">{authError}</div>}
       {authNote && <div className="provider-alert success-alert">{authNote}</div>}
-      <button className="button primary auth-submit" type="submit" disabled={authBusy || !email.trim() || password.length < 8 || (mode === "sign_up" && displayName.trim().length < 2)}>{authBusy ? "Please wait…" : mode === "sign_up" ? "Create account" : "Sign in"}</button>
+      <button className="button primary auth-submit" type="submit" disabled={authBusy || !email.trim() || (!forgotOpen && password.length < 8) || (!forgotOpen && mode === "sign_up" && displayName.trim().length < 2)}>{authBusy ? "Please wait…" : forgotOpen ? "Send reset email" : mode === "sign_up" ? "Create account" : "Sign in"}</button>
     </form>
-    <button className="button secondary auth-submit guest-submit" type="button" onClick={continueAsGuest} disabled={authBusy}>{authBusy ? "Starting guest session…" : "Continue as Guest"}</button>
+    {!forgotOpen && mode === "sign_in" && <button className="auth-switch forgot-link" type="button" onClick={() => { setForgotOpen(true); setAuthError(""); setAuthNote(""); }}>{ "Forgot your password?" }</button>}
+    {forgotOpen && <button className="auth-switch forgot-link" type="button" onClick={() => { setForgotOpen(false); setAuthError(""); setAuthNote(""); }}>{ "Back to sign in" }</button>}
+    {!forgotOpen && <><button className="button secondary auth-submit guest-submit" type="button" onClick={continueAsGuest} disabled={authBusy}>{authBusy ? "Starting guest session…" : "Continue as Guest"}</button>
     <div className="auth-footnote">Guest access: 10 messages per rolling 24 hours. No CRD required.</div>
     <button className="auth-switch" onClick={() => { setMode(mode === "sign_up" ? "sign_in" : "sign_up"); setAuthError(""); setAuthNote(""); }}>{mode === "sign_up" ? "Already have an account? Sign in" : "New to MATRIX LABS? Create an account"}</button>
-    <div className="auth-footnote">Email verification is required. The 300 CRD welcome grant is issued once per account.</div>
+    <div className="auth-footnote">Email verification is required. The 300 CRD welcome grant is issued once per account.</div></>}
   </section></div>;
 
   return <div className="app-shell">
