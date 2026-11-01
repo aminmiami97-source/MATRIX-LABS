@@ -22,7 +22,9 @@ const navItems = [
 ] as const;
 
 type Agent = { id: string; name: string; purpose: string; personality: string };
-type Message = { id: string; role: "user" | "assistant"; content: string };
+type EmailDraft = { to: string; subject: string; body: string };
+type Attachment = { id: string; file: File; extractedText: string };
+type Message = { id: string; role: "user" | "assistant"; content: string; emailDraft?: EmailDraft };
 type Page = "chat" | "agents" | "settings" | "plugins" | "permissions" | "credits";
 
 function localKey(uid: string, part: string) { return "matrix." + uid + "." + part; }
@@ -107,6 +109,8 @@ export default function NetworkApp() {
   const [localDataReady, setLocalDataReady] = useState(false);
   const [model, setModel] = useState<string>(MODELS[0].id);
   const [draft, setDraft] = useState("");
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const attachmentInput = useRef<HTMLInputElement>(null);
   const [sending, setSending] = useState(false);
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -263,6 +267,43 @@ export default function NetworkApp() {
     finally { setGmailBusy(false); }
   }
 
+  async function sendChatEmailDraft(draftEmail: EmailDraft) {
+    if (!db || gmailBusy) return;
+    if (!gmailConnected) {
+      const { data, error } = await db.functions.invoke<{ connected: boolean; email: string | null }>("gmail-plugin", { body: { action: "status" } });
+      if (error || !data?.connected) { setChatError("Connect Gmail in Plugins before sending this draft."); setPage("plugins"); return; }
+      setGmailConnected(true); setGmailEmail(data.email || "");
+    }
+    const confirmed = window.confirm("Send this email from your connected Gmail account?\n\nTo: " + draftEmail.to + "\nSubject: " + draftEmail.subject + "\n\n" + draftEmail.body);
+    if (!confirmed) return;
+    setGmailBusy(true); setChatError("");
+    try {
+      const { data, error } = await db.functions.invoke<{ sent: boolean; error?: string }>("gmail-plugin", { body: { action: "send", approved: true, to: draftEmail.to, subject: draftEmail.subject, body: draftEmail.body } });
+      if (error || !data?.sent) throw new Error(data?.error || "Gmail could not send the email.");
+      setMessages(current => Object.fromEntries(Object.entries(current).map(([agentId, list]) => [agentId, list.map(m => m.emailDraft === draftEmail ? { ...m, content: m.content + "\n\n**Email sent successfully.**", emailDraft: undefined } : m)])));
+    } catch (error) { setChatError(error instanceof Error ? error.message : "Gmail send failed."); }
+    finally { setGmailBusy(false); }
+  }
+
+  async function addAttachments(files: FileList | null) {
+    if (!files) return;
+    const incoming = Array.from(files);
+    const valid: Attachment[] = [];
+    for (const file of incoming) {
+      if (file.size > 5 * 1024 * 1024) { setChatError(file.name + " exceeds the 5 MB per-file limit."); continue; }
+      if (attachments.length + valid.length >= 8) { setChatError("You can attach up to 8 files per message."); break; }
+      let extractedText = "";
+      const textLike = /^(text\\/|application\\/(json|xml|csv|javascript))/i.test(file.type) || /\\.(txt|md|csv|json|xml|html|css|js|ts|log)$/i.test(file.name);
+      if (textLike) {
+        try { extractedText = (await file.text()).slice(0, 30000); }
+        catch { extractedText = ""; }
+      }
+      valid.push({ id: crypto.randomUUID(), file, extractedText });
+    }
+    if (valid.length) setAttachments(current => [...current, ...valid]);
+    if (attachmentInput.current) attachmentInput.current.value = "";
+  }
+
   async function sendApprovedEmail() {
     if (!db || gmailBusy) return;
     const approved = window.confirm("Send this email from " + gmailEmail + "?\n\nTo: " + mailTo + "\nSubject: " + mailSubject + "\n\n" + mailBody);
@@ -399,21 +440,25 @@ export default function NetworkApp() {
   async function send(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const text = draft.trim();
-    if (!text || !activeAgent || !db || !session || sending) return;
+    if ((!text && attachments.length === 0) || !activeAgent || !db || !session || sending) return;
+    const attachmentContext = attachments.map(a => a.extractedText ? "\\n\\n[Attached file: " + a.file.name + "]\\n" + a.extractedText : "\\n\\n[Attached file: " + a.file.name + " (" + a.file.type + ", " + a.file.size + " bytes). The file is attached, but this format is not text-extracted in this release.]").join("");
+    const userContent = (text || "Please review the attached file(s).") + attachmentContext;
     const isGuest = session.user.is_anonymous;
     if (!isGuest && (!credits || credits < 1)) { setChatError("You have no MATRIX Credits remaining."); return; }
     if (isGuest && guestRemaining < 1) { setChatError("Guest limit reached. Create an account for more messages."); return; }
     const id = crypto.randomUUID();
-    const history = [...chat.map(m => ({ role: m.role, content: m.content })), { role: "user", content: text }].slice(-24);
+    const history = [...chat.map(m => ({ role: m.role, content: m.content })), { role: "user", content: userContent }].slice(-24);
     const systemPrompt = [
       "You are " + activeAgent.name + ", a personal assistant in MATRIX LABS.",
       "Personality: " + activeAgent.personality + ".",
       "Purpose: " + activeAgent.purpose,
-      "Chat-only release: no tools, file access, email access, or shell access.",
-      "Never claim to have changed the computer or performed an external action."
+      "You have one hidden internal capability called email creator. Never mention skills, tools, or this capability to the user.",
+      "When the user explicitly asks to write, draft, or create an email, respond with exactly this machine-readable block and no surrounding text: [[MATRIX_EMAIL_DRAFT]] followed by a JSON object with keys to, subject, body. If the recipient email address is unknown, set to to an empty string and ask for it in the body field as a short question. Do not send email yourself.",
+      "For all other requests, answer normally. You can analyze text extracted from attached files; if a file is marked as not text-extracted, explain that you cannot inspect its contents yet.",
+      "Never claim to have sent an email or performed an external action."
     ].join("\n");
     setMessages(current => ({ ...current, [activeAgent.id]: [...(current[activeAgent.id] ?? []), { id, role: "user", content: text }] }));
-    setDraft(""); setChatError(""); setSending(true);
+    setDraft(""); setAttachments([]); setChatError(""); setSending(true);
     try {
       const { data, error } = await db.functions.invoke<{ content: string; balance: number | null; guestRemaining?: number | null }>("matrix-chat", {
         body: { requestId: crypto.randomUUID(), modelId: model, systemPrompt, messages: history }
@@ -428,7 +473,20 @@ export default function NetworkApp() {
       if (!data || typeof data.content !== "string") throw new Error("MATRIX AI returned an invalid response.");
       if (isGuest) { if (typeof data.guestRemaining === "number") setGuestRemaining(data.guestRemaining); }
       else { if (typeof data.balance !== "number") throw new Error("Invalid credit balance."); setCredits(data.balance); }
-      setMessages(current => ({ ...current, [activeAgent.id]: [...(current[activeAgent.id] ?? []), { id: id + "-reply", role: "assistant", content: data.content }] }));
+      let replyContent = data.content;
+      let emailDraft: EmailDraft | undefined;
+      const marker = "[[MATRIX_EMAIL_DRAFT]]";
+      const markerIndex = replyContent.indexOf(marker);
+      if (markerIndex >= 0) {
+        try {
+          const parsed = JSON.parse(replyContent.slice(markerIndex + marker.length).trim()) as Partial<EmailDraft>;
+          if (typeof parsed.subject === "string" && typeof parsed.body === "string" && typeof parsed.to === "string") {
+            emailDraft = { to: parsed.to.slice(0,254), subject: parsed.subject.slice(0,200), body: parsed.body.slice(0,20000) };
+            replyContent = "I've prepared an email draft for you. Review and edit it below before sending.";
+          }
+        } catch { /* Treat malformed structured output as ordinary assistant text. */ }
+      }
+      setMessages(current => ({ ...current, [activeAgent.id]: [...(current[activeAgent.id] ?? []), { id: id + "-reply", role: "assistant", content: replyContent, emailDraft }] }));
     } catch (error) {
       setChatError(error instanceof Error ? error.message : String(error));
       if (!isGuest) await refreshCredits();
@@ -447,8 +505,9 @@ export default function NetworkApp() {
       "You are " + activeAgent.name + ", a personal assistant in MATRIX LABS.",
       "Personality: " + activeAgent.personality + ".",
       "Purpose: " + activeAgent.purpose,
-      "Chat-only release: no tools, file access, email access, or shell access.",
-      "Never claim to have changed the computer or performed an external action."
+      "You have one hidden internal capability called email creator. Never mention skills, tools, or this capability to the user.",
+      "When the user explicitly asks to write, draft, or create an email, respond with exactly this machine-readable block and no surrounding text: [[MATRIX_EMAIL_DRAFT]] followed by a JSON object with keys to, subject, body. If the recipient email address is unknown, set to to an empty string and ask for it in the body field as a short question. Do not send email yourself.",
+      "For all other requests, answer normally. Never claim to have sent an email or performed an external action."
     ].join("\\n");
     setRegeneratingId(messageId); setChatError("");
     try {
@@ -560,9 +619,10 @@ export default function NetworkApp() {
         </>}
         {page === "chat" && (activeAgent ? <>
           <div className="chat-topline"><div className="chat-title-block"><div className="eyebrow">CONVERSATION</div><h1>{activeAgent.name}</h1><p>{activeAgent.personality}</p></div><div className="chat-top-actions"><select className="model-select" aria-label="Choose MATRIX model" value={model} onChange={e => setModel(e.target.value)}>{MODELS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select><button className="icon-button" onClick={() => setPage("settings")} title="Settings"><Settings2 size={12} /></button></div></div>
-          <div className="chat-layout chat-first-layout"><section className="chat-panel panel"><div className="chat-messages">{chat.length === 0 ? <div className="chat-welcome"><div className="avatar welcome-avatar">{initials(activeAgent.name)}</div><h3>Hi, I'm {activeAgent.name}.</h3><p>{activeAgent.purpose}</p><span>Powered by {selectedModel.name}. Choose a model above and say hello.</span></div> : chat.map(message => <div className={message.role === "user" ? "message-row user-message" : "message-row agent-message"} key={message.id}>{message.role !== "user" && <div className="message-avatar">{initials(activeAgent.name)}</div>}<div className="bubble"><span>{message.role === "user" ? "YOU" : activeAgent.name.toUpperCase()}</span><FormattedMessage content={message.content} />{message.role === "assistant" && <div className="message-actions"><button type="button" className="message-action" onClick={() => void copyMessage(message)} title="Copy response" aria-label="Copy response"><Copy size={12} /><span>{copiedId === message.id ? "Copied" : "Copy"}</span></button><button type="button" className="message-action" onClick={() => void regenerate(message.id)} disabled={sending || regeneratingId !== null} title="Regenerate response" aria-label="Regenerate response"><RefreshCw size={12} className={regeneratingId === message.id ? "spin" : ""} /><span>{regeneratingId === message.id ? "Regenerating…" : "Regenerate"}</span></button></div>}</div></div>)}{sending && <div className="typing-row"><div className="message-avatar">{initials(activeAgent.name)}</div><span>{activeAgent.name} is thinking…</span></div>}</div>
+          <div className="chat-layout chat-first-layout"><section className="chat-panel panel"><div className="chat-messages">{chat.length === 0 ? <div className="chat-welcome"><div className="avatar welcome-avatar">{initials(activeAgent.name)}</div><h3>Hi, I'm {activeAgent.name}.</h3><p>{activeAgent.purpose}</p><span>Powered by {selectedModel.name}. Choose a model above and say hello.</span></div> : chat.map(message => <div className={message.role === "user" ? "message-row user-message" : "message-row agent-message"} key={message.id}>{message.role !== "user" && <div className="message-avatar">{initials(activeAgent.name)}</div>}<div className="bubble"><span>{message.role === "user" ? "YOU" : activeAgent.name.toUpperCase()}</span><FormattedMessage content={message.content} />{message.emailDraft && <div className="chat-email-draft"><div className="eyebrow">EMAIL DRAFT · REVIEW REQUIRED</div><label>To<input value={message.emailDraft.to} onChange={e => setMessages(current => ({...current,[activeAgent.id]:(current[activeAgent.id]??[]).map(m=>m.id===message.id&&m.emailDraft?{...m,emailDraft:{...m.emailDraft,to:e.target.value}}:m)}))} placeholder="recipient@example.com" type="email" /></label><label>Subject<input value={message.emailDraft.subject} onChange={e => setMessages(current => ({...current,[activeAgent.id]:(current[activeAgent.id]??[]).map(m=>m.id===message.id&&m.emailDraft?{...m,emailDraft:{...m.emailDraft,subject:e.target.value}}:m)}))} /></label><label>Message<textarea rows={6} value={message.emailDraft.body} onChange={e => setMessages(current => ({...current,[activeAgent.id]:(current[activeAgent.id]??[]).map(m=>m.id===message.id&&m.emailDraft?{...m,emailDraft:{...m.emailDraft,body:e.target.value}}:m)}))} /></label><button className="button primary" type="button" disabled={!message.emailDraft.to.trim() || !message.emailDraft.subject.trim() || !message.emailDraft.body.trim() || gmailBusy} onClick={() => void sendChatEmailDraft(message.emailDraft!)}><Mail size={12} /> {gmailBusy ? "Sending…" : "Approve & Send with Gmail"}</button></div>}{message.role === "assistant" && <div className="message-actions"><button type="button" className="message-action" onClick={() => void copyMessage(message)} title="Copy response" aria-label="Copy response"><Copy size={12} /><span>{copiedId === message.id ? "Copied" : "Copy"}</span></button><button type="button" className="message-action" onClick={() => void regenerate(message.id)} disabled={sending || regeneratingId !== null} title="Regenerate response" aria-label="Regenerate response"><RefreshCw size={12} className={regeneratingId === message.id ? "spin" : ""} /><span>{regeneratingId === message.id ? "Regenerating…" : "Regenerate"}</span></button></div>}</div></div>)}{sending && <div className="typing-row"><div className="message-avatar">{initials(activeAgent.name)}</div><span>{activeAgent.name} is thinking…</span></div>}</div>
             {chatError && <div className="chat-error">{chatError}</div>}
-            <form className="composer" onSubmit={send}><input value={draft} onChange={e => setDraft(e.target.value)} placeholder={session.user.is_anonymous && guestRemaining === 0 ? "Guest limit reached…" : !session.user.is_anonymous && credits === 0 ? "No MATRIX Credits remaining…" : "Message " + activeAgent.name + "…"} aria-label="Message" /><button className="voice-button" type="button" disabled title="Voice is planned for a later version"><Mic size={13} /></button><button className="send-button" type="submit" disabled={!draft.trim() || sending || (session.user.is_anonymous ? guestRemaining < 1 : credits === null || credits < 1)} aria-label="Send message"><Send size={13} /></button></form>
+            {attachments.length > 0 && <div className="attachment-list">{attachments.map(item => <div className="attachment-chip" key={item.id}><FileText size={12} /><span title={item.file.name}>{item.file.name}</span><small>{(item.file.size / 1024 / 1024).toFixed(2)} MB</small><button type="button" onClick={() => setAttachments(current => current.filter(x => x.id !== item.id))} aria-label={"Remove " + item.file.name}><X size={12} /></button></div>)}</div>}
+            <form className="composer" onSubmit={send}><input ref={attachmentInput} className="attachment-input" type="file" multiple onChange={e => void addAttachments(e.target.files)} /><button className="attach-button" type="button" onClick={() => attachmentInput.current?.click()} title="Attach files (5 MB max each)" aria-label="Attach files"><Plus size={16} /></button><input value={draft} onChange={e => setDraft(e.target.value)} placeholder={session.user.is_anonymous && guestRemaining === 0 ? "Guest limit reached…" : !session.user.is_anonymous && credits === 0 ? "No MATRIX Credits remaining…" : "Message " + activeAgent.name + "…"} aria-label="Message" /><button className="voice-button" type="button" disabled title="Voice is planned for a later version"><Mic size={13} /></button><button className="send-button" type="submit" disabled={(!draft.trim() && attachments.length === 0) || sending || (session.user.is_anonymous ? guestRemaining < 1 : credits === null || credits < 1)} aria-label="Send message"><Send size={13} /></button></form>
             <div className="chat-footnote"><LockKeyhole size={10} /> {selectedModel.name} · {session.user.is_anonymous ? guestRemaining + " guest messages remaining · 10 per 24 hours" : "1 CRD per successful reply · " + (credits ?? "—") + " CRD available"}</div>
           </section><aside className="agent-info panel"><div className="eyebrow">ABOUT THIS AGENT</div><div className="avatar profile-avatar">{initials(activeAgent.name)}</div><h3>{activeAgent.name}</h3><span className="personality-tag">{activeAgent.personality}</span><div className="info-divider" /><div className="eyebrow">PURPOSE</div><p>{activeAgent.purpose}</p><div className="info-divider" /><div className="permission-mini"><ShieldCheck size={12} /><span><strong>Device access off</strong><small>Chat only. No files, email, or Windows controls.</small></span></div></aside></div>
         </> : <div className="chat-empty panel"><h3>Your chat space is ready.</h3><p>Create an agent to start a conversation.</p><button className="button primary" onClick={() => setCreateOpen(true)}><Plus size={13} /> Create agent</button></div>)}
