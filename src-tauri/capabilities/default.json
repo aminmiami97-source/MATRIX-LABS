@@ -7,7 +7,14 @@
   ],
   "permissions": [
     "core:default",
-    "opener:allow-open-url",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "https://ndpgjqowvqabozvfgeab.supabase.co/auth/v1/**"
+        }
+      ]
+    },
     "deep-link:default"
   ]
 }
