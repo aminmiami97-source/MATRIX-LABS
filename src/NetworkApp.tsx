@@ -136,7 +136,7 @@ export default function NetworkApp() {
     let active = true;
     const handleRecoveryUrl = async (rawUrl: string) => {
       try {
-        const incoming = new URL(rawUrl);
+        const incoming = new globalThis.URL(rawUrl);
         const params = new URLSearchParams(incoming.hash.replace(/^#/, ""));
         const accessToken = params.get("access_token");
         const refreshToken = params.get("refresh_token");
