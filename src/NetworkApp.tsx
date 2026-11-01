@@ -135,18 +135,31 @@ export default function NetworkApp() {
   useEffect(() => {
     if (!db) return;
     let active = true;
+    const handledUrls = new Set<string>();
     const handleRecoveryUrl = async (rawUrl: string) => {
+      if (handledUrls.has(rawUrl)) return;
+      handledUrls.add(rawUrl);
       try {
         const incoming = new globalThis.URL(rawUrl);
         const params = new URLSearchParams(incoming.hash.replace(/^#/, ""));
-        const accessToken = params.get("access_token");
-        const refreshToken = params.get("refresh_token");
-        const type = params.get("type");
-        const authError = params.get("error_description");
+        const type = incoming.searchParams.get("type") || params.get("type");
+        const authError = incoming.searchParams.get("error_description") || params.get("error_description");
         if (authError) throw new Error(authError.replace(/\+/g, " "));
-        if (!accessToken || !refreshToken) return;
-        const { error } = await db.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-        if (error) throw error;
+
+        // Supabase's default PKCE flow returns a one-time code in the query string.
+        const code = incoming.searchParams.get("code");
+        if (code) {
+          const { error } = await db.auth.exchangeCodeForSession(code);
+          if (error) throw error;
+        } else {
+          // Also accept token-hash callbacks for projects using the implicit flow.
+          const accessToken = params.get("access_token");
+          const refreshToken = params.get("refresh_token");
+          if (!accessToken || !refreshToken) return;
+          const { error } = await db.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+          if (error) throw error;
+        }
+
         if (active) {
           if (type === "recovery") {
             setRecoveryMode(true);
@@ -160,7 +173,7 @@ export default function NetworkApp() {
           setAuthError("");
         }
       } catch (error) {
-        if (active) setAuthError(error instanceof Error ? error.message : "This password reset link could not be verified. Request a new one.");
+        if (active) setAuthError(error instanceof Error ? error.message : "This authentication link could not be verified. Try signing in again.");
       }
     };
     let unlisten: (() => void) | undefined;
