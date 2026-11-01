@@ -142,14 +142,22 @@ export default function NetworkApp() {
         const accessToken = params.get("access_token");
         const refreshToken = params.get("refresh_token");
         const type = params.get("type");
-        if (type !== "recovery" || !accessToken || !refreshToken) return;
+        const authError = params.get("error_description");
+        if (authError) throw new Error(authError.replace(/\+/g, " "));
+        if (!accessToken || !refreshToken) return;
         const { error } = await db.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
         if (error) throw error;
         if (active) {
-          setRecoveryMode(true);
-          setForgotOpen(false);
+          if (type === "recovery") {
+            setRecoveryMode(true);
+            setForgotOpen(false);
+            setAuthNote("");
+          } else {
+            setRecoveryMode(false);
+            setForgotOpen(false);
+            setAuthNote("Google sign-in successful. Welcome to MATRIX LABS.");
+          }
           setAuthError("");
-          setAuthNote("");
         }
       } catch (error) {
         if (active) setAuthError(error instanceof Error ? error.message : "This password reset link could not be verified. Request a new one.");
@@ -279,6 +287,27 @@ export default function NetworkApp() {
       }
     } catch (error) { setAuthError(error instanceof Error ? error.message : "Could not sign in."); }
     finally { setAuthBusy(false); }
+  }
+
+  async function signInWithGoogle() {
+    if (!db || authBusy) return;
+    setAuthBusy(true); setAuthError(""); setAuthNote("");
+    try {
+      const { data, error } = await db.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: "com.matrixlabs.desktop://auth/callback",
+          skipBrowserRedirect: true,
+          queryParams: { prompt: "select_account" }
+        }
+      });
+      if (error) throw error;
+      if (!data.url) throw new Error("Google sign-in did not return an authorization URL.");
+      await openUrl(data.url);
+      setAuthNote("Google opened in your browser. Finish signing in there; MATRIX LABS will open automatically.");
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Could not start Google sign-in.");
+    } finally { setAuthBusy(false); }
   }
 
   async function sendPasswordReset() {
@@ -465,6 +494,9 @@ export default function NetworkApp() {
     <div className="eyebrow">MATRIX NETWORK</div>
     <h1>{forgotOpen ? "Reset your password." : mode === "sign_up" ? "Create your account." : "Welcome back."}</h1>
     <p>{forgotOpen ? "Enter your account email. We'll send you a secure reset link that opens MATRIX LABS." : mode === "sign_up" ? "Join MATRIX LABS and receive 300 starter MATRIX Credits." : "Sign in to continue your conversations."}</p>
+    {!forgotOpen && mode === "sign_in" && <button className="button secondary auth-submit" type="button" onClick={() => void signInWithGoogle()} disabled={authBusy}>
+      {authBusy ? "Please wait…" : "Continue with Google"}
+    </button>}
     <form className="auth-form" onSubmit={forgotOpen ? (event) => { event.preventDefault(); void sendPasswordReset(); } : authenticate}>
       {!forgotOpen && mode === "sign_up" && <><label htmlFor="ml-name">Display name</label><input id="ml-name" className="field" value={displayName} onChange={e => setDisplayName(e.target.value)} maxLength={48} autoComplete="name" required /></>}
       <label htmlFor="ml-email">Email</label><input id="ml-email" className="field" type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" required />
