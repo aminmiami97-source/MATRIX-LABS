@@ -447,6 +447,11 @@ export default function NetworkApp() {
 
   async function send(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const oversizedAttachment = attachments.find(item => item.file.size > MAX_ATTACHMENT_BYTES);
+    if (oversizedAttachment) {
+      setChatError(oversizedAttachment.file.name + " exceeds the 5 MB per-file limit. Remove it before sending.");
+      return;
+    }
     const text = draft.trim();
     if ((!text && attachments.length === 0) || !activeAgent || !db || !session || sending) return;
     const attachmentContext = attachments.map(a => a.extractedText ? "\n\n[Attached file: " + a.file.name + "]\n" + a.extractedText : "\n\n[Attached file: " + a.file.name + " (" + a.file.type + ", " + a.file.size + " bytes). The file is attached, but this format is not text-extracted in this release.]").join("");
