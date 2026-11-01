@@ -2,7 +2,7 @@ import { Fragment, useEffect, useRef, useState, type FormEvent, type ReactNode }
 import { createClient, type Session } from "@supabase/supabase-js";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
-import { ArrowUpRight, ChevronRight, Coins, Command, Copy, FileText, FolderOpen, LockKeyhole, LogOut, Mail, MessageCircle, Mic, Plus, RefreshCw, Send, Settings2, ShieldCheck, Users, X } from "lucide-react";
+import { ArrowUpRight, ChevronRight, Coins, Command, Copy, FileText, FolderOpen, LockKeyhole, LogOut, Mail, MessageCircle, Mic, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, RefreshCw, Send, Settings2, ShieldCheck, Users, X } from "lucide-react";
 
 const URL = import.meta.env.VITE_SUPABASE_URL?.trim() ?? "";
 const PUBLIC_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? "";
@@ -100,6 +100,8 @@ export default function NetworkApp() {
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
 
   const [page, setPage] = useState<Page>("chat");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => read("matrix.ui.sidebarCollapsed", false));
+  const [agentPanelCollapsed, setAgentPanelCollapsed] = useState(() => read("matrix.ui.agentPanelCollapsed", false));
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Record<string, Message[]>>({});
@@ -219,6 +221,8 @@ export default function NetworkApp() {
     return () => { active = false; };
   }, [session]);
 
+  useEffect(() => { localStorage.setItem("matrix.ui.sidebarCollapsed", JSON.stringify(sidebarCollapsed)); }, [sidebarCollapsed]);
+  useEffect(() => { localStorage.setItem("matrix.ui.agentPanelCollapsed", JSON.stringify(agentPanelCollapsed)); }, [agentPanelCollapsed]);
   useEffect(() => { if (session && localDataReady) localStorage.setItem(localKey(session.user.id, "agents"), JSON.stringify(agents)); }, [agents, session, localDataReady]);
   useEffect(() => { if (session && localDataReady) localStorage.setItem(localKey(session.user.id, "messages"), JSON.stringify(messages)); }, [messages, session, localDataReady]);
   useEffect(() => { if (session && localDataReady) localStorage.setItem(localKey(session.user.id, "model"), JSON.stringify(model)); }, [model, session, localDataReady]);
@@ -285,13 +289,15 @@ export default function NetworkApp() {
     finally { setGmailBusy(false); }
   }
 
+  const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+
   async function addAttachments(files: FileList | null) {
     if (!files) return;
     const incoming = Array.from(files);
     const valid: Attachment[] = [];
     let textBudget = Math.max(0, 9000 - attachments.reduce((sum, item) => sum + item.extractedText.length, 0));
     for (const file of incoming) {
-      if (file.size > 5 * 1024 * 1024) { setChatError(file.name + " exceeds the 5 MB per-file limit."); continue; }
+      if (file.size > MAX_ATTACHMENT_BYTES) { setChatError(file.name + " exceeds the 5 MB per-file limit."); continue; }
       if (attachments.length + valid.length >= 8) { setChatError("You can attach up to 8 files per message."); break; }
       let extractedText = "";
       const extension = file.name.toLowerCase().split(".").pop() || "";
@@ -610,10 +616,10 @@ export default function NetworkApp() {
       <div className="sidebar-agent-list">{agents.map(agent => <button key={agent.id} className={page === "chat" && activeAgent?.id === agent.id ? "agent-nav active" : "agent-nav"} onClick={() => { setSelectedId(agent.id); setPage("chat"); }}><div className="tiny-avatar">{initials(agent.name)}</div><span>{agent.name}</span><i /></button>)}{agents.length === 0 && <div className="sidebar-empty">No conversations yet</div>}</div>
       <div className="sidebar-spacer" />
       {session.user.is_anonymous ? <div className="credit-mini guest-credit"><Users size={11} /><span>GUEST · {guestRemaining}/10 LEFT</span></div> : <button className="credit-mini" onClick={() => setPage("credits")}><Coins size={11} /><span>{credits === null ? "—" : credits.toLocaleString()} MATRIX CRD</span><ArrowUpRight size={10} /></button>}
-      <div className="sidebar-profile"><div className="profile-circle">{initials(session.user.user_metadata?.display_name || session.user.email || "M")}</div><div><strong>{session.user.is_anonymous ? "Guest" : session.user.email}</strong><span>{session.user.is_anonymous ? "Guest session · V0.5.0" : "Signed in · V0.5.0"}</span></div><button onClick={signOut} title="Sign out"><LogOut size={13} /></button></div>
+      <div className="sidebar-profile"><div className="profile-circle">{initials(session.user.user_metadata?.display_name || session.user.email || "M")}</div><div><strong>{session.user.is_anonymous ? "Guest" : session.user.email}</strong><span>{session.user.is_anonymous ? "Guest session · V0.6.0" : "Signed in · V0.6.0"}</span></div><button onClick={signOut} title="Sign out"><LogOut size={13} /></button></div>
     </aside>
     <main className="main-area">
-      <header className="topbar"><div className="breadcrumbs"><span>Workspace</span><ChevronRight size={11} /><strong>{page === "chat" ? activeAgent?.name ?? "Chat" : page === "credits" ? "MATRIX Credits" : page[0].toUpperCase() + page.slice(1)}</strong></div><div className="topbar-actions"><div className="local-mode"><i /> {session.user.is_anonymous ? "GUEST MODE" : "ACCOUNT CONNECTED"}</div>{session.user.is_anonymous ? <div className="top-credits"><Users size={12} /><strong>{guestRemaining}/10</strong><span>LEFT</span></div> : <button className="top-credits" onClick={() => setPage("credits")}><Coins size={12} /><strong>{credits ?? "—"}</strong><span>CRD</span></button>}</div></header>
+      <header className="topbar"><div className="topbar-leading"><button className="icon-button topbar-sidebar-toggle" type="button" onClick={() => setSidebarCollapsed(value => !value)} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}>{sidebarCollapsed ? <PanelLeftOpen size={13} /> : <PanelLeftClose size={13} />}</button><div className="breadcrumbs"><span>Workspace</span><ChevronRight size={11} /><strong>{page === "chat" ? activeAgent?.name ?? "Chat" : page === "credits" ? "MATRIX Credits" : page[0].toUpperCase() + page.slice(1)}</strong></div></div><div className="topbar-actions"><div className="local-mode"><i /> {session.user.is_anonymous ? "GUEST MODE" : "ACCOUNT CONNECTED"}</div>{session.user.is_anonymous ? <div className="top-credits"><Users size={12} /><strong>{guestRemaining}/10</strong><span>LEFT</span></div> : <button className="top-credits" onClick={() => setPage("credits")}><Coins size={12} /><strong>{credits ?? "—"}</strong><span>CRD</span></button>}</div></header>
       <div className={page === "chat" ? "page-content chat-content" : "page-content"}>
         {page === "agents" && <>
           {title("Your agents.", "Give each assistant its own name, purpose, and personality.", createButton)}
