@@ -56,7 +56,7 @@ function FormattedMessage({ content }: { content: string }) {
       const language = line.trim().slice(3).trim(); i++; const code: string[] = [];
       while (i < lines.length && !lines[i].trim().startsWith("```")) code.push(lines[i++]);
       if (i < lines.length) i++;
-      blocks.push(<pre className="code-block" key={"code"+blocks.length}><div className="code-block-head"><div className="code-language">{language || "CODE"}</div><button type="button" className="code-copy" onClick={() => { void navigator.clipboard.writeText(code.join("\n")).catch(() => undefined); }} title="Copy code">Copy</button></div><code>{code.join("\n")}</code></pre>);
+      blocks.push(<pre className="code-block" key={"code"+blocks.length}><div className="code-block-head"><div className="code-language">{language || "CODE"}</div><button type="button" className="code-copy" onClick={async () => { try { await navigator.clipboard.writeText(code.join("\n")); } catch { /* Clipboard access may be unavailable. */ } }} title="Copy code">Copy</button></div><code>{code.join("\n")}</code></pre>);
       continue;
     }
     const heading = line.match(/^(#{1,6})\s+(.+)$/);
