@@ -12,6 +12,9 @@
       "allow": [
         {
           "url": "https://ndpgjqowvqabozvfgeab.supabase.co/auth/v1/**"
+        },
+        {
+          "url": "https://accounts.google.com/o/oauth2/**"
         }
       ]
     },
