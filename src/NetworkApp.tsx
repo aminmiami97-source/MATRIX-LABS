@@ -238,7 +238,6 @@ export default function NetworkApp() {
   useEffect(() => { if (session && localDataReady) writeLocal(localKey(session.user.id, "messages"), messages); }, [messages, session, localDataReady]);
   useEffect(() => { if (session && localDataReady) writeLocal(localKey(session.user.id, "model"), model); }, [model, session, localDataReady]);
   useEffect(() => { if (session?.user.is_anonymous && localDataReady) writeLocal(localKey(session.user.id, "guest_remaining"), guestRemaining); }, [guestRemaining, session, localDataReady]);
-  useEffect(() => { const node = chatScrollRef.current; if (node) node.scrollTo({ top: node.scrollHeight, behavior: "smooth" }); }, [chat, sending, regeneratingId]);
 
 
   useEffect(() => {
@@ -341,6 +340,7 @@ export default function NetworkApp() {
 
   const activeAgent = agents.find(a => a.id === selectedId) ?? agents[0] ?? null;
   const chat = activeAgent ? messages[activeAgent.id] ?? [] : [];
+  useEffect(() => { const node = chatScrollRef.current; if (node) node.scrollTo({ top: node.scrollHeight, behavior: "smooth" }); }, [chat, sending, regeneratingId]);
   const selectedModel = MODELS.find(m => m.id === model) ?? MODELS[0];
 
   async function authenticate(event: FormEvent<HTMLFormElement>) {
