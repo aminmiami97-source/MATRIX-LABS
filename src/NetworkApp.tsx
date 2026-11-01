@@ -608,7 +608,7 @@ export default function NetworkApp() {
           <section className="credits-banner"><div className="credits-emblem"><Coins size={21} /></div><div><div className="eyebrow">AVAILABLE BALANCE</div><div className="credits-total">{credits ?? "—"} <small>CRD</small></div><p>New accounts receive 300 CRD once. Each successful response costs 1 CRD.</p></div></section>
           <div className="notice muted-notice">Onboarding tasks do not add credits in this version. The server enforces the balance and prevents local edits.</div>
         </>}
-        <footer className="page-footer"><span>MATRIX LABS <i>·</i> YOUR AI WORKSPACE</span><span>V0.4.0</span></footer>
+        <footer className="page-footer"><span>MATRIX LABS <i>·</i> YOUR AI WORKSPACE</span><span>V0.5.0</span></footer>
       </div>
     </main>
     {createOpen && <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setCreateOpen(false); }}><form className="create-modal" onSubmit={createAgent}>
