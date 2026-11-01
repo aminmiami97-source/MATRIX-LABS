@@ -37,7 +37,13 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
       - name: Install frontend dependencies
         run: npm install
-      - name: Generate Windows icon assets\n        run: |\n          npm install --no-save sharp\n          node --input-type=module -e "import sharp from 'sharp'; await sharp('src-tauri/icons/icon-source.svg').resize(1024, 1024).png().toFile('src-tauri/icons/icon-generated.png')"\n          npx tauri icon src-tauri/icons/icon-generated.png --output src-tauri/icons\n      - name: Build MATRIX LABS\n        run: npm run tauri:build
+      - name: Generate Windows icon assets
+        run: |
+          npm install --no-save sharp
+          node --input-type=module -e "import sharp from 'sharp'; await sharp('src-tauri/icons/icon-source.svg').resize(1024, 1024).png().toFile('src-tauri/icons/icon-generated.png')"
+          npx tauri icon src-tauri/icons/icon-generated.png --output src-tauri/icons
+      - name: Build MATRIX LABS
+        run: npm run tauri:build
         env:
           VITE_SUPABASE_URL: https://ndpgjqowvqabozvfgeab.supabase.co
           VITE_SUPABASE_ANON_KEY: sb_publishable_mEiLwO1VIKnBUEs8NVD2uw_sdYYbrsN
