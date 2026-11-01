@@ -1012,3 +1012,54 @@ body {
 @media(max-width:760px) {
   .plugin-coming-grid { grid-template-columns:minmax(0,1fr); }
 }
+
+
+/* 0.6.1 — interaction and layout polish */
+:where(button,a,input,textarea,select,[tabindex]):focus-visible {
+  outline:2px solid rgba(177,165,255,.9);
+  outline-offset:3px;
+}
+button:not(:disabled),.plugin-card,.agent-card,.model-choice {
+  -webkit-tap-highlight-color:transparent;
+}
+.agent-card,.plugin-card,.settings-panel,.permission-row,.version-card {
+  transition:border-color .18s ease,transform .18s ease,box-shadow .18s ease;
+}
+.agent-card:hover,.plugin-card:hover,.settings-panel:hover,.permission-row:hover,.version-card:hover {
+  border-color:rgba(169,154,255,.27);
+  box-shadow:0 12px 30px rgba(0,0,0,.16);
+}
+.plugin-card { min-width:0; }
+.plugin-card-title { min-width:0; }
+.plugin-card-title p,.plugin-scope span,.permission-copy p,.notice span {
+  overflow-wrap:anywhere;
+}
+.composer input { min-width:0; }
+.chat-messages { overscroll-behavior:contain; scroll-behavior:smooth; }
+.chat-error,.provider-alert { overflow-wrap:anywhere; }
+.sidebar-toggle,.topbar-sidebar-toggle,.icon-button,.message-action,.attach-button {
+  transition:background .16s ease,color .16s ease,border-color .16s ease,transform .16s ease;
+}
+.sidebar-toggle:active,.icon-button:active,.message-action:active,.attach-button:active {
+  transform:scale(.96);
+}
+@media(max-width:760px) {
+  .plugin-coming-grid { grid-template-columns:minmax(0,1fr); }
+  .plugin-card-head { align-items:flex-start; }
+  .plugin-card-title { flex:1 1 180px; }
+}
+@media(max-width:580px) {
+  .topbar-leading { min-width:0; }
+  .breadcrumbs { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .chat-first-layout .chat-messages { padding:18px 12px; }
+  .message-row { max-width:100%; }
+  .bubble { min-width:0; overflow-wrap:anywhere; }
+  .composer { margin-left:9px; margin-right:9px; gap:5px; }
+  .chat-footnote { text-align:center; line-height:1.5; padding-left:12px; padding-right:12px; }
+}
+@media(hover:none) {
+  .agent-card:hover,.plugin-card:hover,.settings-panel:hover,.permission-row:hover,.version-card:hover {
+    transform:none;
+    box-shadow:none;
+  }
+}
