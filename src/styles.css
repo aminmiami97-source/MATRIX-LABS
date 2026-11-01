@@ -685,3 +685,6 @@ svg { width: 15px; height: 15px; }
 .compose-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:8px; }
 .compose-actions > span { display:flex; align-items:center; gap:6px; color:#89978d; font-size:10px; }
 @media (max-width:700px) { .plugin-card-head { flex-wrap:wrap; } .plugin-status { margin-left:64px; } .compose-actions { align-items:flex-start; flex-direction:column; } }
+
+.forgot-link { display: block; width: 100%; margin: 10px 0 2px; text-align: center; color: #aeb9b0; font-size: 10px; }
+.forgot-link:hover { color: var(--accent); }
