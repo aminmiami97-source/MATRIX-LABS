@@ -470,7 +470,7 @@ export default function NetworkApp() {
       "For all other requests, answer normally. You can analyze text extracted from attached files; if a file is marked as not text-extracted, explain that you cannot inspect its contents yet.",
       "Never claim to have sent an email or performed an external action."
     ].join("\n");
-    setMessages(current => ({ ...current, [activeAgent.id]: [...(current[activeAgent.id] ?? []), { id, role: "user", content: text }] }));
+    setMessages(current => ({ ...current, [activeAgent.id]: [...(current[activeAgent.id] ?? []), { id, role: "user", content: userContent }] }));
     setDraft(""); setAttachments([]); setChatError(""); setSending(true);
     try {
       const { data, error } = await db.functions.invoke<{ content: string; balance: number | null; guestRemaining?: number | null }>("matrix-chat", {
@@ -521,7 +521,7 @@ export default function NetworkApp() {
       "You have one hidden internal capability called email creator. Never mention skills, tools, or this capability to the user.",
       "When the user explicitly asks to write, draft, or create an email, respond with exactly this machine-readable block and no surrounding text: [[MATRIX_EMAIL_DRAFT]] followed by a JSON object with keys to, subject, body. If the recipient email address is unknown, set to to an empty string and ask for it in the body field as a short question. Do not send email yourself.",
       "For all other requests, answer normally. Never claim to have sent an email or performed an external action."
-    ].join("\\n");
+    ].join("\n");
     setRegeneratingId(messageId); setChatError("");
     try {
       const { data, error } = await db.functions.invoke<{ content: string; balance: number | null; guestRemaining?: number | null }>("matrix-chat", {
@@ -537,10 +537,23 @@ export default function NetworkApp() {
       if (!data || typeof data.content !== "string") throw new Error("MATRIX AI returned an invalid response.");
       if (isGuest) { if (typeof data.guestRemaining === "number") setGuestRemaining(data.guestRemaining); }
       else { if (typeof data.balance !== "number") throw new Error("Invalid credit balance."); setCredits(data.balance); }
+      let replyContent = data.content;
+      let emailDraft: EmailDraft | undefined;
+      const marker = "[[MATRIX_EMAIL_DRAFT]]";
+      const markerIndex = replyContent.indexOf(marker);
+      if (markerIndex >= 0) {
+        try {
+          const parsed = JSON.parse(replyContent.slice(markerIndex + marker.length).trim()) as Partial<EmailDraft>;
+          if (typeof parsed.subject === "string" && typeof parsed.body === "string" && typeof parsed.to === "string") {
+            emailDraft = { to: parsed.to.slice(0, 254), subject: parsed.subject.slice(0, 200), body: parsed.body.slice(0, 20000) };
+            replyContent = "I've prepared an email draft for you. Review and edit it below before sending.";
+          }
+        } catch { /* Treat malformed structured output as ordinary assistant text. */ }
+      }
       setMessages(current => {
         const list = [...(current[activeAgent.id] ?? [])];
         const target = list.findIndex(m => m.id === messageId);
-        if (target >= 0) list[target] = { ...list[target], content: data.content };
+        if (target >= 0) list[target] = { ...list[target], content: replyContent, emailDraft };
         return { ...current, [activeAgent.id]: list };
       });
     } catch (error) {
