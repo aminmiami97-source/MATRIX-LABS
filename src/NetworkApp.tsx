@@ -15,7 +15,7 @@ const MODELS = [
 
 const navItems = [
   { id: "chat", label: "Chat", icon: MessageCircle },
-  { id: "agents", label: "Agents", icon: Users },
+  { id: "agents", label: "Workspace", icon: Users },
   { id: "plugins", label: "Plugins", icon: Mail },
   { id: "permissions", label: "Permissions", icon: ShieldCheck },
   { id: "settings", label: "Settings", icon: Settings2 }
@@ -652,7 +652,12 @@ export default function NetworkApp() {
       <header className="topbar"><div className="topbar-leading"><button className="icon-button topbar-sidebar-toggle" type="button" onClick={() => setSidebarCollapsed(value => !value)} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}>{sidebarCollapsed ? <PanelLeftOpen size={13} /> : <PanelLeftClose size={13} />}</button><div className="breadcrumbs"><span>Workspace</span><ChevronRight size={11} /><strong>{page === "chat" ? activeAgent?.name ?? "Chat" : page === "credits" ? "MATRIX Credits" : page[0].toUpperCase() + page.slice(1)}</strong></div></div><div className="topbar-actions"><button className="icon-button" type="button" onClick={() => setAgentPanelCollapsed(value => !value)} title={agentPanelCollapsed ? "Show agent details" : "Hide agent details"} aria-label={agentPanelCollapsed ? "Show agent details" : "Hide agent details"}>{agentPanelCollapsed ? <PanelRightOpen size={12} /> : <PanelRightClose size={12} />}</button><div className="local-mode"><i /> {session.user.is_anonymous ? "GUEST MODE" : "ACCOUNT CONNECTED"}</div>{session.user.is_anonymous ? <div className="top-credits"><Users size={12} /><strong>{guestRemaining}/10</strong><span>LEFT</span></div> : <button className="top-credits" onClick={() => setPage("credits")}><Coins size={12} /><strong>{credits ?? "—"}</strong><span>CRD</span></button>}</div></header>
       <div className={page === "chat" ? "page-content chat-content" : "page-content"}>
         {page === "agents" && <>
-          {title("Your agents.", "Give each assistant its own name, purpose, and personality.", createButton)}
+          {title("Your workspace.", "Your agents, conversations, and tools—organized in one place.", createButton)}
+          <div className="workspace-metrics">
+            <div className="workspace-metric"><span>ACTIVE AGENTS</span><strong>{agents.length.toString().padStart(2, "0")}</strong><small>Personal AI profiles</small></div>
+            <div className="workspace-metric"><span>SAVED CONVERSATIONS</span><strong>{Object.values(messages).reduce((total, list) => total + list.length, 0).toString().padStart(2, "0")}</strong><small>Across all agents</small></div>
+            <div className="workspace-metric"><span>SELECTED MODEL</span><strong className="workspace-model">{selectedModel.name}</strong><small>Default chat model</small></div>
+          </div>
           {agents.length === 0 ? <div className="large-empty panel"><div className="empty-icon big"><Users size={24} /></div><h3>Your agent list is empty.</h3><p>Create an agent to start a conversation.</p>{createButton}</div> : <div className="agent-cards">{agents.map(agent => <article className="agent-card panel" key={agent.id}><div className="agent-card-top"><div className="avatar big-avatar">{initials(agent.name)}</div><span className="local-tag">LOCAL PROFILE</span></div><h3>{agent.name}</h3><div className="personality">{agent.personality}</div><p>{agent.purpose}</p><div className="agent-card-actions"><button className="button secondary" onClick={() => { setSelectedId(agent.id); setPage("chat"); }}><MessageCircle size={13} /> Open chat</button><button className="icon-button danger" onClick={() => { setAgents(list => list.filter(a => a.id !== agent.id)); setMessages(list => { const copy = {...list}; delete copy[agent.id]; return copy; }); if(selectedId === agent.id) setSelectedId(null); }} title="Delete agent"><X size={14} /></button></div></article>)}</div>}
         </>}
         {page === "chat" && (activeAgent ? <>
