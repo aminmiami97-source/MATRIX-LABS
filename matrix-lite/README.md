@@ -1,46 +1,53 @@
 # MATRIX LITE — v1.0.0
 
-A standalone, responsive AI chat website with two OpenRouter free-model choices. It uses one owner-managed OpenRouter key on a Supabase Edge Function, so visitors never need to enter their own key.
+MATRIX LITE is a responsive AI chat website with exactly two model choices. Visitors do not enter or provide an API key. Every chat request is routed through a Supabase Edge Function that uses the owner's server-side OpenRouter key.
+
+## Live website
+
+https://ndpgjqowvqabozvfgeab.supabase.co/functions/v1/matrix-lite-site
 
 ## Models
 
-- **MATRIX SIMPLE** — `nvidia/nemotron-3.5-lightning:free`
-- **MATRIX LITE** — `nvidia/nemotron-3.5-super-vl:free`
+- **MATRIX SIMPLE** — \`nvidia/nemotron-3.5-lightning:free\`
+- **MATRIX LITE** — \`nvidia/nemotron-3.5-super-vl:free\`
 
-Both currently show $0 model pricing on OpenRouter. Free provider capacity and rate limits can change; availability is not guaranteed.
+Both model variants currently display zero token pricing on OpenRouter. Free provider capacity and provider availability are not guaranteed and may change.
 
 ## Architecture
 
-- `index.html` is a static browser app. Conversation history and preferences stay in each visitor's browser local storage.
-- `matrix-lite-chat` is deployed as a separate Supabase Edge Function. It only accepts the two allowlisted model IDs and sends requests to OpenRouter.
-- The OpenRouter key is read only from the server-side Supabase Function Secret named `MATRIX_LITE_OPENROUTER_KEY`. It is not part of this repository or the browser bundle.
-- A Supabase database function enforces a shared daily allowance of 40 requests and a per-IP hourly allowance of 10 requests. If the rate-limit database check fails, chat fails closed.
+- \`matrix-lite/index.html\` — self-contained static frontend; CSS and JavaScript are in the same file.
+- Supabase Edge Function \`matrix-lite-site\` — serves the website over HTTPS.
+- Supabase Edge Function \`matrix-lite-chat\` — validates requests and sends them to OpenRouter using the server-only key.
+- Supabase migration \`202611020001_matrix_lite_public_chat_limits.sql\` — creates the shared usage-limit table and RPC function.
+- Conversation history and model preference are stored in each visitor's browser local storage. No chat history table is used.
 
-## One-time owner setup
+## Owner setup: one shared OpenRouter key
 
-1. Create an OpenRouter API key in your OpenRouter account. **Do not paste it into this repository, the website, or a chat message.**
-2. Open the Supabase project used by MATRIX LITE: `ndpgjqowvqabozvfgeab`.
-3. Go to **Edge Functions → Secrets** and add:
-   - Name: `MATRIX_LITE_OPENROUTER_KEY`
+1. Create an OpenRouter API key in your OpenRouter account.
+2. Open the Supabase project **ndpgjqowvqabozvfgeab**.
+3. Navigate to **Edge Functions → Secrets**.
+4. Add a secret:
+   - Name: \`MATRIX_LITE_OPENROUTER_KEY\`
    - Value: your OpenRouter API key
-4. The separate `matrix-lite-chat` Edge Function is already deployed. It is configured for public requests and validates the request body, model allowlist, request size, and rate limits on the server.
-5. To publish the website, enable **GitHub Pages → Build and deployment → GitHub Actions** for this repository. The workflow in `.github/workflows/matrix-lite-pages.yml` publishes the `matrix-lite` folder.
-6. After the first successful Pages deployment, open the Pages URL and send a test message with each model.
+5. Save. The Edge Function reads the secret on the server; it is not committed to this repository or sent to visitors.
 
-## Usage limits and privacy
+Do not paste the OpenRouter key into source code, GitHub, a website setting exposed to visitors, or a chat message.
 
-- This is a shared key: all visitors use the same OpenRouter account and its free capacity.
-- MATRIX LITE applies a site-wide maximum of 40 successful rate-limit reservations per UTC day, plus 10 requests per IP per hour. Provider-side limits may be lower.
-- Do not promise unlimited use. The service can be busy, unavailable, or temporarily paused after the shared allowance is reached.
-- The free NVIDIA model pages state that free-endpoint use is logged for service/security and model-improvement purposes. Do not enter confidential or personal information.
-- Chat history is stored locally in the browser, not in the MATRIX LITE database.
+## Shared limits
 
-## Project files
+The backend enforces:
+- A global maximum of 40 allowed chat requests per UTC day.
+- A maximum of 10 requests per client IP per rolling hour bucket (hourly window).
+- Only the two listed free model IDs are accepted.
+- Message count, total size, per-message length, token output and request timeout are bounded.
+- If the database-backed rate limiter is unavailable, chat fails closed.
 
-- `index.html` — complete frontend
-- Supabase Edge Function `matrix-lite-chat` — server-side OpenRouter proxy
-- Supabase migration `matrix_lite_public_chat_limits` — server-side request counters
+These are MATRIX LITE's own protections. OpenRouter and its providers may apply lower or different limits. A shared key means all visitors consume the same free-model capacity, so unlimited availability cannot be guaranteed.
+
+## Privacy
+
+Messages are sent to OpenRouter and the selected model provider. The NVIDIA free model pages state that free endpoint requests are logged for security and product-improvement purposes. Visitors should not send passwords, personal information, confidential files, or other sensitive content. Conversation history remains local to the visitor's browser; clearing browser storage removes that local history.
 
 ## Version
 
-`v1.0.0` — initial release.
+\`v1.0.0\` — first MATRIX LITE release.
