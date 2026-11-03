@@ -12,7 +12,7 @@
 (function(){
 "use strict";
 var CONFIG={url:"https://ndpgjqowvqabozvfgeab.supabase.co/functions/v1/matrix-lite-chat",key:"sb_publishable_mEiLwO1VIKnBUEs8NVD2uw_sdYYbrsN"};
-var MODELS={"nvidia/nemotron-3.5-lightning:free":{name:"MATRIX SIMPLE",note:"Fast everyday assistant"},"nvidia/nemotron-3.5-super-vl:free":{name:"MATRIX LITE",note:"Advanced reasoning & vision"}};
+var MODELS={"nvidia/nemotron-3.5-lightning:free":{name:"MATRIX SIMPLE",note:"Fast everyday assistant"},"nvidia/nemotron-3.5-super-vl:free":{name:"MATRIX LITE",note:"Advanced model for harder questions"}};
 var $=function(id){return document.getElementById(id);};
 var chats=read("matrixLite.chats",[]),prefs=read("matrixLite.prefs",{model:"nvidia/nemotron-3.5-lightning:free"}),active=null,busy=false;
 function read(k,f){try{return JSON.parse(localStorage.getItem(k))||f;}catch(e){return f;}}function save(){try{localStorage.setItem("matrixLite.chats",JSON.stringify(chats.slice(0,30)));}catch(e){}}function savePrefs(){try{localStorage.setItem("matrixLite.prefs",JSON.stringify(prefs));}catch(e){}}
