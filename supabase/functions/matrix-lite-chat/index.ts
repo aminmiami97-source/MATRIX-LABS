@@ -4,6 +4,7 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "apikey, x-client-info, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Expose-Headers": "X-Matrix-Remaining-Today",
   "Content-Type": "application/json; charset=utf-8",
   "Cache-Control": "no-store",
 };
@@ -245,9 +246,9 @@ Deno.serve(async (request: Request) => {
         ],
         temperature: safeTemperature,
         max_tokens: safeMaxTokens,
-        stream: false,
+        stream: true,
       }),
-      signal: AbortSignal.timeout(40_000),
+      signal: request.signal,
     });
   } catch {
     return reply(502, { error: "The model service could not be reached. Please try again." });
@@ -270,35 +271,20 @@ Deno.serve(async (request: Request) => {
     return reply(502, { error: "The selected model is temporarily unavailable." });
   }
 
-  let data: Record<string, unknown>;
-  try {
-    const responseText = await upstream.text();
-    if (new TextEncoder().encode(responseText).length > 1_000_000) {
-      return reply(502, { error: "The model response was too large." });
-    }
-    const parsed: unknown = JSON.parse(responseText);
-    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-      throw new Error("Invalid response.");
-    }
-    data = parsed as Record<string, unknown>;
-  } catch {
-    return reply(502, { error: "The model returned an unreadable response." });
+  if (!upstream.body) {
+    return reply(502, { error: "The model did not open a response stream. Please try again." });
   }
 
-  const choices = Array.isArray(data.choices) ? data.choices : [];
-  const firstChoice = choices[0] as Record<string, unknown> | undefined;
-  const responseMessage = firstChoice?.message as Record<string, unknown> | undefined;
-  const content = responseMessage?.content;
+  // Pass the provider's Server-Sent Events stream through without buffering it.
+  // The browser can abort this request; request.signal then cancels the upstream fetch.
+  const streamHeaders = new Headers(corsHeaders);
+  streamHeaders.set("Content-Type", "text/event-stream; charset=utf-8");
+  streamHeaders.set("Cache-Control", "no-cache, no-transform");
+  streamHeaders.set("X-Matrix-Remaining-Today", String(limit.remainingToday));
+  streamHeaders.set("X-Accel-Buffering", "no");
 
-  if (typeof content !== "string" || !content.trim()) {
-    return reply(502, { error: "The model did not return a text response." });
-  }
-
-  return reply(200, {
-    content,
-    requestedModel: modelId,
-    actualModel: typeof data.model === "string" ? data.model : modelId,
-    remainingToday: limit.remainingToday,
-    dailyLimit: 40,
+  return new Response(upstream.body, {
+    status: 200,
+    headers: streamHeaders,
   });
 });
