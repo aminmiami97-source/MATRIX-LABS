@@ -6,6 +6,21 @@ import { ArrowUpRight, CalendarDays, ChevronRight, Coins, Command, Copy, FileTex
 
 const URL = import.meta.env.VITE_SUPABASE_URL?.trim() ?? "";
 const PUBLIC_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? "";
+const APP_VERSION = "0.7.0";
+const RELEASES_API = "https://api.github.com/repos/aminmiami97-source/MATRIX-LABS/releases/latest";
+
+type ReleaseAsset = { name: string; browser_download_url: string };
+type LatestRelease = { tag_name: string; html_url: string; body?: string | null; published_at?: string | null; assets?: ReleaseAsset[] };
+
+function compareVersions(a: string, b: string) {
+  const left = a.replace(/^v/i, "").split(".").map(Number);
+  const right = b.replace(/^v/i, "").split(".").map(Number);
+  for (let i = 0; i < Math.max(left.length, right.length); i++) {
+    const delta = (left[i] || 0) - (right[i] || 0);
+    if (delta !== 0) return Math.sign(delta);
+  }
+  return 0;
+}
 const db = URL && PUBLIC_KEY ? createClient(URL, PUBLIC_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } }) : null;
 
 const MODELS = [
@@ -140,6 +155,48 @@ export default function NetworkApp() {
   const [mailTo, setMailTo] = useState("");
   const [mailSubject, setMailSubject] = useState("");
   const [mailBody, setMailBody] = useState("");
+  const [updateChecking, setUpdateChecking] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<{ version: string; url: string; notes: string } | null>(null);
+  const [updateMessage, setUpdateMessage] = useState("");
+  const [updateDismissed, setUpdateDismissed] = useState(false);
+
+  async function checkForUpdates(silent = false) {
+    if (updateChecking) return;
+    setUpdateChecking(true);
+    setUpdateMessage("");
+    try {
+      const response = await fetch(RELEASES_API, {
+        headers: { Accept: "application/vnd.github+json" },
+        cache: "no-store"
+      });
+      if (response.status === 404) {
+        setUpdateInfo(null);
+        setUpdateMessage("No public release has been published yet.");
+        return;
+      }
+      if (!response.ok) throw new Error("GitHub update service returned " + response.status + ".");
+      const release = await response.json() as LatestRelease;
+      const version = (release.tag_name || "").replace(/^v/i, "");
+      if (!version || compareVersions(version, APP_VERSION) <= 0) {
+        setUpdateInfo(null);
+        setUpdateMessage("You're using the latest version (v" + APP_VERSION + ").");
+        return;
+      }
+      const installer = (release.assets || []).find(asset => /\.exe$/i.test(asset.name));
+      setUpdateInfo({
+        version,
+        url: installer?.browser_download_url || release.html_url,
+        notes: (release.body || "A newer version of MATRIX LABS is available.").slice(0, 1200)
+      });
+      setUpdateDismissed(false);
+    } catch (error) {
+      if (!silent) setUpdateMessage(error instanceof Error ? error.message : "Could not check for updates.");
+    } finally {
+      setUpdateChecking(false);
+    }
+  }
+
+  useEffect(() => { void checkForUpdates(true); }, []);
 
   useEffect(() => {
     if (!db) { setAuthReady(true); return; }
@@ -650,6 +707,7 @@ export default function NetworkApp() {
     </aside>
     <main className="main-area">
       <header className="topbar"><div className="topbar-leading"><button className="icon-button topbar-sidebar-toggle" type="button" onClick={() => setSidebarCollapsed(value => !value)} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}>{sidebarCollapsed ? <PanelLeftOpen size={13} /> : <PanelLeftClose size={13} />}</button><div className="breadcrumbs"><span>Workspace</span><ChevronRight size={11} /><strong>{page === "chat" ? activeAgent?.name ?? "Chat" : page === "credits" ? "MATRIX Credits" : page[0].toUpperCase() + page.slice(1)}</strong></div></div><div className="topbar-actions"><button className="icon-button" type="button" onClick={() => setAgentPanelCollapsed(value => !value)} title={agentPanelCollapsed ? "Show agent details" : "Hide agent details"} aria-label={agentPanelCollapsed ? "Show agent details" : "Hide agent details"}>{agentPanelCollapsed ? <PanelRightOpen size={12} /> : <PanelRightClose size={12} />}</button><div className="local-mode"><i /> {session.user.is_anonymous ? "GUEST MODE" : "ACCOUNT CONNECTED"}</div>{session.user.is_anonymous ? <div className="top-credits"><Users size={12} /><strong>{guestRemaining}/10</strong><span>LEFT</span></div> : <button className="top-credits" onClick={() => setPage("credits")}><Coins size={12} /><strong>{credits ?? "—"}</strong><span>CRD</span></button>}</div></header>
+      {updateInfo && !updateDismissed && <div className="update-banner" role="status"><div className="update-banner-icon"><RefreshCw size={15} /></div><div className="update-banner-copy"><strong>MATRIX LABS v{updateInfo.version} is available</strong><span>A newer release is ready. Download the installer to update your app.</span></div><button className="button primary update-download" type="button" onClick={() => void openUrl(updateInfo.url)}>Download update <ArrowUpRight size={12} /></button><button className="update-dismiss" type="button" onClick={() => setUpdateDismissed(true)} aria-label="Dismiss update notification"><X size={14} /></button></div>}
       <div className={page === "chat" ? "page-content chat-content" : "page-content"}>
         {page === "agents" && <>
           {title("Your workspace.", "Your agents, conversations, and tools—organized in one place.", createButton)}
@@ -675,7 +733,7 @@ export default function NetworkApp() {
             <section className="panel settings-panel"><div className="panel-head"><div><div className="eyebrow">ACCOUNT</div><h3>Personal workspace</h3></div><span className="connected-tag">{session.user.is_anonymous ? "GUEST" : "SIGNED IN"}</span></div><div className="account-details"><div className="account-avatar">{initials(session.user.user_metadata?.display_name || session.user.email || "M")}</div><div><strong>{session.user.is_anonymous ? "Guest session" : session.user.user_metadata?.display_name || "MATRIX member"}</strong><span>{session.user.is_anonymous ? "No email or password connected" : session.user.email}</span></div></div>{session.user.is_anonymous ? <div className="account-balance"><span className="eyebrow">GUEST QUOTA</span><strong>{guestRemaining} <small>/ 10 MESSAGES</small></strong><p>10 messages per rolling 24 hours. No CRD is issued or charged.</p></div> : <div className="account-balance"><span className="eyebrow">AVAILABLE BALANCE</span><strong>{credits ?? "—"} <small>CRD</small></strong><p>New accounts receive 300 CRD once. One successful AI response costs 1 CRD.</p></div>}{creditsError && <div className="provider-alert error-alert">{creditsError}</div>}<button className="button quiet" onClick={signOut}><LogOut size={12} /> Sign out</button></section>
             <section className="panel settings-panel"><div className="panel-head"><div><div className="eyebrow">MODEL PREFERENCE</div><h3>Choose your MATRIX model</h3></div><span className="local-tag">2 MODELS</span></div><div className="model-choice-list">{MODELS.map(m => <button key={m.id} className={model === m.id ? "model-choice selected" : "model-choice"} onClick={() => setModel(m.id)}><span className="model-choice-radio">{model === m.id ? "●" : "○"}</span><span className="model-choice-copy"><strong>{m.name}</strong><small>{m.info}</small><span>{m.id === MODELS[0].id ? "Lightweight everyday model." : "Larger model for more involved chats."}</span></span></button>)}</div><div className="settings-footnote">AGOORA's model publisher states prompts and outputs may be retained and used to improve models. Free routes can also be rate-limited. Never send passwords, secrets, or sensitive personal information.</div></section>
           </div>
-          <section className="panel version-card"><div><div className="eyebrow">APPLICATION VERSION</div><h3>MATRIX LABS <span>0.7.0</span></h3><p>Workspace update · November 2026</p></div><div className="version-changes"><span>NEW</span><ul><li>Collapsible navigation and agent details panels</li><li>5 MB maximum size per attached file</li><li>Refined workspace layout and spacing</li><li>Chat history and regenerated email draft fixes</li><li>Chat formatting, code-copy controls, and workspace responsiveness</li>
+          <section className="panel version-card"><div><div className="eyebrow">APPLICATION VERSION</div><h3>MATRIX LABS <span>v{APP_VERSION}</span></h3><p>Check for new releases and download the latest Windows installer.</p><div className="update-controls"><button className="button secondary" type="button" onClick={() => void checkForUpdates()} disabled={updateChecking}><RefreshCw size={12} className={updateChecking ? "update-spin" : ""} /> {updateChecking ? "Checking…" : "Check for updates"}</button>{updateInfo && <button className="button primary" type="button" onClick={() => void openUrl(updateInfo.url)}>Download v{updateInfo.version} <ArrowUpRight size={12} /></button>}</div>{updateMessage && <p className="update-status" role="status">{updateMessage}</p>}</div><div className="version-changes"><span>NEW</span><ul><li>Collapsible navigation and agent details panels</li><li>5 MB maximum size per attached file</li><li>Refined workspace layout and spacing</li><li>Chat history and regenerated email draft fixes</li><li>Chat formatting, code-copy controls, and workspace responsiveness</li>
             <li>Approved graphite, cyan, and violet interface refresh</li>
             <li>Workspace overview with live agent and conversation metrics</li><li>Safer local preference and conversation persistence</li></ul></div></section>
           <div className="notice"><ShieldCheck size={13} /><span><strong>AI connection: Automatic.</strong> MATRIX LABS connects to its secured chat service without asking you for an API key. Your key stays on the server, and you can switch between AGOORA 2.0 and MATRIX AI 1.0 above. Only chat instructions and recent messages are sent to the selected model service.</span></div>
