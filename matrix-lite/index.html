@@ -3,7 +3,7 @@
 <style>
 :root{color-scheme:dark;--bg:#090a0c;--panel:#12151a;--line:#292e37;--muted:#858d99;--text:#f2f3f5;--green:#a7e5bd}*{box-sizing:border-box}body{margin:0;height:100vh;background:var(--bg);color:var(--text);font:14px/1.5 Inter,system-ui,sans-serif}button,textarea,select{font:inherit}button{cursor:pointer;color:inherit}.app{height:100vh;display:grid;grid-template-columns:245px 1fr;overflow:hidden}.side{background:#0d0f12;border-right:1px solid var(--line);padding:18px 14px;display:flex;flex-direction:column}.brand{display:flex;align-items:center;gap:11px;padding:5px 7px 24px}.mark{width:35px;height:35px;border:1px solid #454b56;border-radius:10px;background:linear-gradient(145deg,#292e37,#101216);display:grid;place-items:center;font-weight:900}.brand b{letter-spacing:.16em}.brand small{display:block;color:var(--muted);font-size:10px;letter-spacing:.13em}.new{border:1px solid #454b56;background:#e5e7eb;color:#101216;border-radius:9px;padding:10px;font-weight:700}.label{font-size:10px;letter-spacing:.16em;color:#707885;margin:24px 8px 8px}.history{display:grid;gap:4px;overflow:auto}.history button,.side-action{border:0;background:transparent;color:#b8bec8;text-align:left;padding:9px;border-radius:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.history button.active,.history button:hover,.side-action:hover{background:#1b1f26;color:white}.bottom{margin-top:auto}.side-action{width:100%}.version{padding:12px 9px;color:#717985;font-size:11px}.check{color:var(--green)}.main{min-width:0;display:flex;flex-direction:column;position:relative}.top{height:64px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 24px;gap:12px}.top-left,.top-right{display:flex;align-items:center;gap:12px}.model{background:#171a20;border:1px solid #353b46;border-radius:9px;padding:9px 12px;color:white;font-weight:700}.note{font-size:11px;color:var(--muted)}.usage{font-size:11px;color:#b4bac4;border:1px solid var(--line);border-radius:20px;padding:6px 10px}.icon{width:36px;height:36px;border:1px solid var(--line);border-radius:9px;background:#15181d}.scroll{flex:1;overflow:auto;padding:32px 18px 160px}.inner{max-width:800px;margin:auto}.welcome{min-height:calc(100vh - 270px);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.orb{width:58px;height:58px;border:1px solid #454b56;border-radius:17px;background:linear-gradient(145deg,#282e38,#101216);display:grid;place-items:center;font-weight:900;font-size:20px}.welcome h1{font-size:clamp(26px,4vw,36px);letter-spacing:-.04em;margin:20px 0 7px}.welcome p{color:var(--muted);max-width:440px}.suggestions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;width:min(100%,540px);margin-top:17px}.suggestion{background:#12151a;border:1px solid #2b3039;border-radius:10px;padding:13px;text-align:left}.suggestion:hover{background:#1c2027}.suggestion b{display:block;font-size:12px}.suggestion span{font-size:11px;color:var(--muted)}.messages{display:grid;gap:24px}.message{display:grid;grid-template-columns:29px 1fr;gap:12px}.avatar{width:28px;height:28px;border:1px solid #393f49;border-radius:9px;background:#171a20;display:grid;place-items:center;font-size:11px;font-weight:800}.message.user .avatar{background:#e5e7eb;color:#101216}.msg-head{display:flex;gap:9px;align-items:center;margin:2px 0 7px}.msg-head b{font-size:12px}.msg-head small{font-size:10px;color:#7c8490}.content{color:#d5d8de;line-height:1.75;overflow-wrap:anywhere}.content p{margin:0 0 10px}.content pre{background:#0c0e11;border:1px solid #2a3039;border-radius:9px;padding:14px;overflow:auto}.tools{margin-top:7px}.tools button{border:0;background:transparent;color:#808894;font-size:10px}.composer-wrap{position:absolute;bottom:0;left:0;right:0;padding:24px 18px 14px;background:linear-gradient(180deg,transparent,#090a0cf5 30%,#090a0c 70%)}.composer{max-width:800px;margin:auto;background:#14171c;border:1px solid #3a404b;border-radius:14px;padding:11px 12px 9px}.composer:focus-within{border-color:#626b79}.composer textarea{width:100%;min-height:44px;max-height:170px;resize:none;border:0;outline:0;background:transparent;color:white;padding:5px}.composer textarea::placeholder{color:#78808d}.composer-foot{display:flex;align-items:center;justify-content:space-between}.hint,.disclaimer{font-size:10px;color:#737b86}.send{width:34px;height:34px;border:0;border-radius:9px;background:#e5e7eb;color:#111318;font-weight:900}.send:disabled{opacity:.35}.disclaimer{text-align:center;margin:8px auto 0}.overlay{display:none;position:fixed;inset:0;background:#000b;z-index:10;align-items:center;justify-content:center;padding:18px}.overlay.open{display:flex}.modal{width:min(100%,440px);background:#12151a;border:1px solid #363d48;border-radius:14px;padding:20px}.modal-head{display:flex;justify-content:space-between;align-items:center}.modal h2{font-size:17px;margin:0}.close{border:0;background:transparent;font-size:22px;color:#abb2bd}.setting{border-top:1px solid var(--line);padding:13px 0;margin-top:12px}.setting b{font-size:12px}.setting p{font-size:11px;color:var(--muted);margin:4px 0}.setting select{width:100%;padding:9px;background:#1a1e25;color:white;border:1px solid #39414d;border-radius:8px;margin-top:7px}.about{background:#1a1e25;border:1px solid #303741;padding:12px;border-radius:9px;font-size:11px;color:#b3bbc6;line-height:1.7}.toast{display:none;position:fixed;bottom:95px;left:50%;transform:translateX(-50%);background:#e5e7eb;color:#101216;padding:9px 14px;border-radius:8px;font-size:12px;z-index:20}.toast.show{display:block}.mobile{display:none}@media(max-width:720px){.app{grid-template-columns:1fr}.side{position:fixed;z-index:8;inset:0 auto 0 0;width:260px;transform:translateX(-105%);transition:transform .2s;box-shadow:20px 0 50px #0009}.side.open{transform:translateX(0)}.mobile{display:block}.top{height:58px;padding:0 12px}.top-left,.top-right{gap:7px}.model{font-size:11px;max-width:165px}.note{display:none}.usage{font-size:10px;padding:5px 8px}.scroll{padding:22px 14px 150px}.welcome{min-height:calc(100vh - 255px)}.suggestions{grid-template-columns:1fr}.composer-wrap{padding:20px 11px 11px}.disclaimer{font-size:9px}}
 
-/* MATRIX LITE v1.1.0 — layout, scrolling and visual polish */
+/* MATRIX LITE v1.2.0 — layout, scrolling and visual polish */
 html,body{width:100%;height:100%;overflow:hidden}
 body{background:radial-gradient(ellipse at 72% -12%,rgba(120,139,170,.13),transparent 42%),#090a0c}
 .app{height:100vh;height:100dvh;min-height:0}
@@ -52,32 +52,181 @@ button:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px sol
 @media(max-width:720px){.app{height:100dvh}.scroll{padding-top:18px;padding-bottom:158px}.welcome{min-height:calc(100dvh - 245px)}.composer-wrap{padding-top:30px}.suggestion{min-height:68px}.message{gap:9px}.scroll::-webkit-scrollbar{width:3px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
 
+
+/* MATRIX LITE v1.2.0 — streaming and readable Markdown */
+.code-block{margin:14px 0;border:1px solid #343c48;border-radius:11px;overflow:hidden;background:#0b0d10}
+.code-head{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#151920;border-bottom:1px solid #2c333d;color:#909aa8;font-size:9px;letter-spacing:.12em}
+.code-copy{border:1px solid #343d49;background:#202630;color:#cbd2dc;border-radius:6px;padding:4px 8px;font-size:10px;letter-spacing:0;transition:background .15s,border-color .15s}
+.code-copy:hover{background:#2a323e;border-color:#697688}
+.code-block pre{margin:0;padding:14px 16px;overflow-x:auto;max-width:100%;white-space:pre}
+.code-block code{font:12px/1.75 "SFMono-Regular",Consolas,"Liberation Mono",monospace;color:#d9e1ed}
+.inline-code{padding:2px 5px;border-radius:5px;background:#242a33;color:#dce5f2;font:.91em "SFMono-Regular",Consolas,monospace}
+.content h2,.content h3,.content h4,.content h5{margin:18px 0 7px;color:#f0f2f6;line-height:1.3}
+.content h3{font-size:18px}.content h4{font-size:16px}.content h5{font-size:14px}
+.content ul,.content ol{margin:8px 0 14px;padding-left:23px;display:grid;gap:5px}
+.content li{padding-left:3px}
+.content blockquote{margin:12px 0;padding:3px 0 3px 13px;border-left:2px solid #66758a;color:#aeb8c7}
+.content a{color:#b8d0f3;text-decoration:underline;text-decoration-color:#647b9c;text-underline-offset:3px}
+.content hr{border:0;border-top:1px solid #363e49;margin:18px 0}
+.response-state{margin-top:8px;color:#9aa4b2;font-size:10px}
+.tools{display:flex;gap:12px;align-items:center}
+.tools button{padding:3px 0;transition:color .15s}.tools button:hover{color:#dce4ef}
+.tools button[data-regenerate]{color:#b7c9e1}
+.stream-cursor{display:inline-block;width:7px;height:15px;margin-left:3px;vertical-align:-2px;background:#c8d2df;border-radius:1px;animation:stream-caret 1s steps(2,end) infinite}
+@keyframes stream-caret{50%{opacity:0}}
+.message.streaming .msg-head small{color:#b9e8ca}
+.send.stop{background:#a84e4e;color:#fff;box-shadow:0 3px 14px rgba(168,78,78,.2);font-size:13px}
+.send.stop:hover{background:#c35a5a}
+@media(max-width:720px){.code-block pre{padding:11px}.code-block code{font-size:11px}.content h3{font-size:17px}}
+
 </style></head><body>
-<div class="app"><aside class="side" id="side"><div class="brand"><div class="mark">M.</div><div><b>MATRIX LITE</b><small>AI WORKSPACE</small></div></div><button class="new" id="newChat">＋ &nbsp; New chat</button><div class="label">RECENT CONVERSATIONS</div><div class="history" id="history"></div><div class="bottom"><button class="side-action" id="settingsSide">⚙ &nbsp; Settings</button><button class="side-action" id="clear">⌫ &nbsp; Clear conversations</button><div class="version"><span class="check">✓</span> MATRIX LITE · v1.1.0</div></div></aside>
+<div class="app"><aside class="side" id="side"><div class="brand"><div class="mark">M.</div><div><b>MATRIX LITE</b><small>AI WORKSPACE</small></div></div><button class="new" id="newChat">＋ &nbsp; New chat</button><div class="label">RECENT CONVERSATIONS</div><div class="history" id="history"></div><div class="bottom"><button class="side-action" id="settingsSide">⚙ &nbsp; Settings</button><button class="side-action" id="clear">⌫ &nbsp; Clear conversations</button><div class="version"><span class="check">✓</span> MATRIX LITE · v1.2.0</div></div></aside>
 <main class="main"><header class="top"><div class="top-left"><button class="icon mobile" id="menu">☰</button><select class="model" id="model"><option value="nvidia/nemotron-3.5-lightning:free">MATRIX SIMPLE</option><option value="nvidia/nemotron-3.5-super-vl:free">MATRIX LITE</option></select><span class="note" id="modelNote">Fast everyday assistant</span></div><div class="top-right"><span class="usage" id="usage">Shared free access</span><button class="icon" id="settings" aria-label="Settings">⚙</button></div></header>
 <section class="scroll" id="scroll"><div class="inner"><div class="welcome" id="welcome"><div class="orb">M.</div><h1>What are we thinking today?</h1><p>A focused AI workspace. Ask a question, explore an idea, or build something new.</p><div class="suggestions"><button class="suggestion" data-prompt="Explain a difficult topic in simple steps."><b>Learn something</b><span>Break down a difficult topic</span></button><button class="suggestion" data-prompt="Help me plan a small project from start to finish."><b>Plan a project</b><span>Turn an idea into clear steps</span></button><button class="suggestion" data-prompt="Help me debug this code. I will share the error and code."><b>Debug code</b><span>Find the issue and explain the fix</span></button><button class="suggestion" data-prompt="Give me five original ideas for a creative project."><b>Explore ideas</b><span>Get a fresh starting point</span></button></div></div><div class="messages" id="messages"></div></div></section>
-<div class="composer-wrap"><form class="composer" id="form"><textarea id="prompt" rows="1" maxlength="8000" placeholder="Message MATRIX LITE…"></textarea><div class="composer-foot"><span class="hint">Enter to send · Shift + Enter for a new line</span><button class="send" id="send" disabled>↑</button></div></form><div class="disclaimer">Messages are sent to OpenRouter and its model providers. Don't share passwords, secrets or personal information.</div></div></main></div>
-<div class="overlay" id="overlay" role="dialog" aria-modal="true"><div class="modal"><div class="modal-head"><h2>Settings</h2><button class="close" id="close">×</button></div><div class="setting"><b>Default model</b><p>Choose which model opens when you start a new chat.</p><select id="defaultModel"><option value="nvidia/nemotron-3.5-lightning:free">MATRIX SIMPLE · Fast</option><option value="nvidia/nemotron-3.5-super-vl:free">MATRIX LITE · Advanced</option></select></div><div class="setting"><b>Privacy</b><p>Conversation history is saved in this browser. Messages are sent to OpenRouter and its model providers, where provider policies may apply. Do not share personal or confidential information. Visitors do not need their own OpenRouter key.</p></div><div class="about"><b>MATRIX LITE v1.1.0</b> <span class="check">✓ Release build</span><br>Two free OpenRouter models · Owner-managed shared API access<br>Daily usage is shared across visitors and may pause when the allowance is reached.</div><div class="update-log"><div class="update-title"><span>WHAT’S NEW · V1.1.0</span><span class="update-tag">LATEST UPDATE</span></div><ul><li>Chat messages now scroll independently inside the workspace.</li><li>Refined dark interface with cleaner surfaces, depth, focus states and smoother transitions.</li><li>Improved phone and tablet layout, including touch-friendly scrolling.</li></ul></div></div></div><div class="toast" id="toast"></div>
+<div class="composer-wrap"><form class="composer" id="form"><textarea id="prompt" rows="1" maxlength="8000" placeholder="Message MATRIX LITE…"></textarea><div class="composer-foot"><span class="hint">Enter to send · Shift + Enter for a new line · Stop while generating</span><button class="send" id="send" disabled>↑</button></div></form><div class="disclaimer">Messages are sent to OpenRouter and its model providers. Don't share passwords, secrets or personal information.</div></div></main></div>
+<div class="overlay" id="overlay" role="dialog" aria-modal="true"><div class="modal"><div class="modal-head"><h2>Settings</h2><button class="close" id="close">×</button></div><div class="setting"><b>Default model</b><p>Choose which model opens when you start a new chat.</p><select id="defaultModel"><option value="nvidia/nemotron-3.5-lightning:free">MATRIX SIMPLE · Fast</option><option value="nvidia/nemotron-3.5-super-vl:free">MATRIX LITE · Advanced</option></select></div><div class="setting"><b>Privacy</b><p>Conversation history is saved in this browser. Messages are sent to OpenRouter and its model providers, where provider policies may apply. Do not share personal or confidential information. Visitors do not need their own OpenRouter key.</p></div><div class="about"><b>MATRIX LITE v1.2.0</b> <span class="check">✓ Release build</span><br>Two free OpenRouter models · Owner-managed shared API access<br>Daily usage is shared across visitors and may pause when the allowance is reached.</div><div class="update-log"><div class="update-title"><span>WHAT’S NEW · V1.1.0</span><span class="update-tag">LATEST UPDATE</span></div><ul><li>Chat messages now scroll independently inside the workspace.</li><li>Refined dark interface with cleaner surfaces, depth, focus states and smoother transitions.</li><li>Improved phone and tablet layout, including touch-friendly scrolling.</li></ul></div></div></div><div class="toast" id="toast"></div>
 <script>
 (function(){
 "use strict";
 var CONFIG={url:"https://ndpgjqowvqabozvfgeab.supabase.co/functions/v1/matrix-lite-chat",key:"sb_publishable_mEiLwO1VIKnBUEs8NVD2uw_sdYYbrsN"};
 var MODELS={"nvidia/nemotron-3.5-lightning:free":{name:"MATRIX SIMPLE",note:"Fast everyday assistant"},"nvidia/nemotron-3.5-super-vl:free":{name:"MATRIX LITE",note:"Advanced model for harder questions"}};
 var $=function(id){return document.getElementById(id);};
-var chats=read("matrixLite.chats",[]),prefs=read("matrixLite.prefs",{model:"nvidia/nemotron-3.5-lightning:free"}),active=null,busy=false;
-function read(k,f){try{return JSON.parse(localStorage.getItem(k))||f;}catch(e){return f;}}function save(){try{localStorage.setItem("matrixLite.chats",JSON.stringify(chats.slice(0,30)));}catch(e){}}function savePrefs(){try{localStorage.setItem("matrixLite.prefs",JSON.stringify(prefs));}catch(e){}}
-function uid(){return crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random();}function current(){return chats.find(function(c){return c.id===active;});}function modelId(){return $("model").value;}
-function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}function md(s){return "<p>"+esc(s).replace(/\n/g,"<br>")+"</p>";}
-function toast(t){$("toast").textContent=t;$("toast").classList.add("show");clearTimeout(toast.timer);toast.timer=setTimeout(function(){$("toast").classList.remove("show");},2300);}
+var chats=read("matrixLite.chats",[]),prefs=read("matrixLite.prefs",{model:"nvidia/nemotron-3.5-lightning:free"}),active=null,busy=false,abortController=null,activeContent=null,activeAssistant=null;
+function read(k,f){try{return JSON.parse(localStorage.getItem(k))||f;}catch(e){return f;}}
+function save(){try{localStorage.setItem("matrixLite.chats",JSON.stringify(chats.slice(0,30).map(function(c){return {id:c.id,title:c.title,model:c.model,messages:c.messages.map(function(m){return {role:m.role,content:m.content,stopped:!!m.stopped,interrupted:!!m.interrupted};})};})));}catch(e){}}
+function savePrefs(){try{localStorage.setItem("matrixLite.prefs",JSON.stringify(prefs));}catch(e){}}
+function uid(){return crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random();}
+function current(){return chats.find(function(c){return c.id===active;});}
+function modelId(){return $("model").value;}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+function toast(t){$("toast").textContent=t;$("toast").classList.add("show");clearTimeout(toast.timer);toast.timer=setTimeout(function(){$("toast").classList.remove("show");},2400);}
 function setModel(v){if(!MODELS[v])return;$("model").value=v;$("modelNote").textContent=MODELS[v].note;prefs.model=v;savePrefs();$("defaultModel").value=v;}
-function render(){var h=$("history");h.replaceChildren();chats.slice(0,25).forEach(function(c){var b=document.createElement("button");b.textContent=c.title||"New conversation";b.className=c.id===active?"active":"";b.addEventListener("click",function(){active=c.id;setModel(c.model||prefs.model);render();$("side").classList.remove("open");});h.append(b);});var c=current(),list=c?c.messages:[];$("welcome").style.display=list.length?"none":"flex";var host=$("messages");host.replaceChildren();list.forEach(function(m,i){var a=document.createElement("article");a.className="message "+m.role;var ai=m.role==="assistant";a.innerHTML='<div class="avatar">'+(ai?"M.":"Y")+'</div><div><div class="msg-head"><b>'+(ai?"MATRIX LITE":"You")+'</b>'+(ai?'<small>'+MODELS[c.model].name+'</small>':"")+'</div><div class="content">'+md(m.content)+'</div>'+(ai?'<div class="tools"><button data-copy="'+i+'">Copy response</button></div>':"")+'</div>';host.append(a);});if(busy){var w=document.createElement("article");w.className="message";w.innerHTML='<div class="avatar">M.</div><div><div class="msg-head"><b>MATRIX LITE</b><small>Thinking…</small></div><div class="content">Generating a response ···</div></div>';host.append(w);}requestAnimationFrame(function(){$("scroll").scrollTop=$("scroll").scrollHeight;});}
-function newChat(){active=uid();chats.unshift({id:active,title:"New conversation",model:modelId(),messages:[]});save();render();$("prompt").focus();$("side").classList.remove("open");}
-function resize(){var p=$("prompt");p.style.height="auto";p.style.height=Math.min(p.scrollHeight,170)+"px";$("send").disabled=busy||!p.value.trim();}
-function requestMessages(messages){var list=messages.slice(-16),total=list.reduce(function(sum,m){return sum+m.content.length;},0);while(total>28000&&list.length>1){total-=list.shift().content.length;}return list;}
-async function send(text){var prompt=text.trim();if(!prompt||busy)return;var c=current();if(!c){active=uid();c={id:active,title:"New conversation",model:modelId(),messages:[]};chats.unshift(c);}c.model=modelId();if(!c.messages.length)c.title=prompt.slice(0,40)+(prompt.length>40?"…":"");c.messages.push({role:"user",content:prompt});save();$("prompt").value="";resize();busy=true;render();try{var r=await fetch(CONFIG.url,{method:"POST",headers:{"Content-Type":"application/json","apikey":CONFIG.key},body:JSON.stringify({modelId:c.model,messages:requestMessages(c.messages).map(function(m){return {role:m.role,content:m.content};}),maxTokens:1000,temperature:.7}),signal:AbortSignal.timeout(50000)});var d={};try{d=await r.json();}catch(e){}if(!r.ok)throw new Error(d.error||"The request failed. Try again.");if(typeof d.content!=="string"||!d.content.trim())throw new Error("The model returned an empty response.");c.messages.push({role:"assistant",content:d.content});if(Number.isFinite(Number(d.remainingToday)))$("usage").textContent=Number(d.remainingToday)+" shared messages left today";}catch(e){c.messages.push({role:"assistant",content:"I couldn't complete that request. "+(e.message||"Connection error.")});}finally{busy=false;save();render();resize();}}
-$("newChat").addEventListener("click",newChat);$("form").addEventListener("submit",function(e){e.preventDefault();send($("prompt").value);});$("prompt").addEventListener("input",resize);$("prompt").addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();if(!$("send").disabled)send($("prompt").value);}});$("model").addEventListener("change",function(){setModel(modelId());var c=current();if(c){c.model=modelId();save();render();}});
-function openSettings(){$("defaultModel").value=prefs.model;$("overlay").classList.add("open");}function closeSettings(){$("overlay").classList.remove("open");}
-$("settings").addEventListener("click",openSettings);$("settingsSide").addEventListener("click",openSettings);$("close").addEventListener("click",closeSettings);$("overlay").addEventListener("click",function(e){if(e.target===$("overlay"))closeSettings();});$("defaultModel").addEventListener("change",function(e){setModel(e.target.value);});$("clear").addEventListener("click",function(){if(confirm("Clear all conversations saved in this browser?")){chats=[];active=null;save();render();$("side").classList.remove("open");}});$("menu").addEventListener("click",function(){$("side").classList.toggle("open");});document.querySelectorAll(".suggestion").forEach(function(b){b.addEventListener("click",function(){send(b.dataset.prompt);});});$("messages").addEventListener("click",async function(e){var b=e.target.closest("[data-copy]");if(b){try{await navigator.clipboard.writeText(current().messages[Number(b.dataset.copy)].content);toast("Response copied.");}catch(err){toast("Clipboard unavailable.");}}});
+function inlineMarkdown(source){
+ var saved=[],tokenized=String(source).replace(/`([^`\n]+)`/g,function(_,code){saved.push(code);return "\u0000"+(saved.length-1)+"\u0000";});
+ var result=esc(tokenized);
+ result=result.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+ result=result.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").replace(/__(.+?)__/g,"<strong>$1</strong>");
+ result=result.replace(/~~(.+?)~~/g,"<del>$1</del>").replace(/\*([^*\n]+)\*/g,"<em>$1</em>").replace(/_([^_\n]+)_/g,"<em>$1</em>");
+ return result.replace(/\u0000(\d+)\u0000/g,function(_,n){return '<code class="inline-code">'+esc(saved[Number(n)])+"</code>";});
+}
+function renderMarkdown(source){
+ var lines=String(source||"").replace(/\r\n?/g,"\n").split("\n"),out=[],paragraph=[],listType=null,listItems=[];
+ function flushParagraph(){if(paragraph.length){out.push("<p>"+paragraph.map(inlineMarkdown).join("<br>")+"</p>");paragraph=[];}}
+ function flushList(){if(listType)out.push("<"+listType+">"+listItems.map(function(x){return "<li>"+inlineMarkdown(x)+"</li>";}).join("")+"</"+listType+">");listType=null;listItems=[];}
+ function flushAll(){flushParagraph();flushList();}
+ for(var i=0;i<lines.length;i++){
+  var line=lines[i],fence=line.match(/^\s*```([\w.+-]*)\s*$/);
+  if(fence){flushAll();var language=fence[1]||"code",code=[];i++;while(i<lines.length&&!/^\s*```\s*$/.test(lines[i])){code.push(lines[i]);i++;}out.push('<div class="code-block"><div class="code-head"><span>'+esc(language.toUpperCase())+'</span><button type="button" class="code-copy" data-copy-code>Copy code</button></div><pre><code>'+esc(code.join("\n"))+"</code></pre></div>");continue;}
+  if(!line.trim()){flushAll();continue;}
+  var heading=line.match(/^(#{1,4})\s+(.+)$/);
+  if(heading){flushAll();var level=Math.min(heading[1].length+1,5);out.push("<h"+level+">"+inlineMarkdown(heading[2])+"</h"+level+">");continue;}
+  if(/^\s*(---+|\*\*\*+)\s*$/.test(line)){flushAll();out.push("<hr>");continue;}
+  var quote=line.match(/^\s*>\s?(.*)$/);
+  if(quote){flushAll();out.push("<blockquote>"+inlineMarkdown(quote[1])+"</blockquote>");continue;}
+  var unordered=line.match(/^\s*[-*+]\s+(.+)$/),ordered=line.match(/^\s*\d+[.)]\s+(.+)$/);
+  if(unordered||ordered){flushParagraph();var nextType=unordered?"ul":"ol";if(listType&&listType!==nextType)flushList();listType=nextType;listItems.push((unordered||ordered)[1]);continue;}
+  flushList();paragraph.push(line);
+ }
+ flushAll();return out.join("");
+}
+function buildMessage(m,i,list,model){
+ var article=document.createElement("article"),ai=m.role==="assistant";article.className="message "+m.role+(m.streaming?" streaming":"");
+ var avatar=document.createElement("div");avatar.className="avatar";avatar.textContent=ai?"M.":"Y";
+ var column=document.createElement("div"),head=document.createElement("div");head.className="msg-head";
+ var name=document.createElement("b");name.textContent=ai?"MATRIX LITE":"You";head.append(name);
+ if(ai){var label=document.createElement("small");label.textContent=(MODELS[model]||MODELS["nvidia/nemotron-3.5-lightning:free"]).name;head.append(label);}
+ var content=document.createElement("div");content.className="content";content.innerHTML=renderMarkdown(m.content);
+ if(m.streaming){var cursor=document.createElement("span");cursor.className="stream-cursor";content.append(cursor);}
+ column.append(head,content);
+ if(m.stopped||m.interrupted){var state=document.createElement("div");state.className="response-state";state.textContent=m.stopped?"Generation stopped":"Connection interrupted";column.append(state);}
+ if(ai&&!m.streaming){
+  var tools=document.createElement("div");tools.className="tools";
+  var copy=document.createElement("button");copy.type="button";copy.dataset.copy=String(i);copy.textContent="Copy response";tools.append(copy);
+  if(i===list.length-1){var regen=document.createElement("button");regen.type="button";regen.dataset.regenerate=String(i);regen.textContent="↻ Regenerate";tools.append(regen);}
+  column.append(tools);
+ }
+ article.append(avatar,column);return article;
+}
+function render(){
+ var h=$("history");h.replaceChildren();
+ chats.slice(0,25).forEach(function(c){var b=document.createElement("button");b.textContent=c.title||"New conversation";b.className=c.id===active?"active":"";
+  b.addEventListener("click",function(){if(busy)stopGeneration();active=c.id;setModel(c.model||prefs.model);render();$("side").classList.remove("open");});h.append(b);});
+ var c=current(),list=c?c.messages:[];$("welcome").style.display=list.length?"none":"flex";
+ var host=$("messages");host.replaceChildren();activeContent=null;
+ list.forEach(function(m,i){var node=buildMessage(m,i,list,c.model);host.append(node);if(m.streaming)activeContent=node.querySelector(".content");});
+ requestAnimationFrame(function(){$("scroll").scrollTop=$("scroll").scrollHeight;});updateControls();
+}
+function updateStreamBubble(message){
+ if(!activeContent||!message)return;var scroller=$("scroll"),stick=scroller.scrollHeight-scroller.scrollTop-scroller.clientHeight<140;
+ activeContent.innerHTML=renderMarkdown(message.content);var cursor=document.createElement("span");cursor.className="stream-cursor";activeContent.append(cursor);
+ if(stick)scroller.scrollTop=scroller.scrollHeight;
+}
+function updateControls(){
+ var send=$("send");send.textContent=busy?"■":"↑";send.classList.toggle("stop",busy);send.title=busy?"Stop generation":"Send message";
+ send.setAttribute("aria-label",busy?"Stop generation":"Send message");send.disabled=busy?false:!$("prompt").value.trim();$("model").disabled=busy;
+}
+function newChat(){if(busy)stopGeneration();active=uid();chats.unshift({id:active,title:"New conversation",model:modelId(),messages:[]});save();render();$("prompt").focus();$("side").classList.remove("open");}
+function resize(){var p=$("prompt");p.style.height="auto";p.style.height=Math.min(p.scrollHeight,170)+"px";updateControls();}
+function requestMessages(messages){var list=messages.slice(-16),total=list.reduce(function(sum,m){return sum+m.content.length;},0);while(total>28000&&list.length>1)total-=list.shift().content.length;return list.map(function(m){return {role:m.role,content:m.content};});}
+function stopGeneration(){if(abortController&&!abortController.signal.aborted)abortController.abort();}
+async function runGeneration(chat){
+ if(busy)return;
+ var assistant={role:"assistant",content:"",streaming:true};chat.messages.push(assistant);save();
+ var controller=new AbortController();abortController=controller;activeAssistant=assistant;busy=true;render();
+ try{
+  var response=await fetch(CONFIG.url,{method:"POST",headers:{"Content-Type":"application/json","apikey":CONFIG.key},body:JSON.stringify({modelId:chat.model,messages:requestMessages(chat.messages.slice(0,-1)),maxTokens:1000,temperature:.7,stream:true}),signal:controller.signal});
+  if(!response.ok){var errorData={};try{errorData=await response.json();}catch(e){}throw new Error(errorData.error||"The request failed. Please try again.");}
+  var remaining=response.headers.get("X-Matrix-Remaining-Today");if(remaining!==null&&remaining!=="")$("usage").textContent=remaining+" shared messages left today";
+  if(!response.body)throw new Error("Streaming is not supported by this connection.");
+  var reader=response.body.getReader(),decoder=new TextDecoder(),buffer="",lastSave=0;
+  function handleLine(line){
+   if(!line||line.slice(0,5)!=="data:")return;var raw=line.slice(5).trim();if(!raw||raw==="[DONE]")return;
+   var packet;try{packet=JSON.parse(raw);}catch(e){return;}
+   if(packet.error){var reason=typeof packet.error==="string"?packet.error:(packet.error.message||"The model stream returned an error.");throw new Error(reason);}
+   var choice=Array.isArray(packet.choices)?packet.choices[0]:null,delta=choice&&choice.delta?choice.delta.content:null;
+   if(Array.isArray(delta))delta=delta.map(function(part){return part&&typeof part.text==="string"?part.text:"";}).join("");
+   if(typeof delta==="string"&&delta){assistant.content+=delta;updateStreamBubble(assistant);if(assistant.content.length-lastSave>300){save();lastSave=assistant.content.length;}}
+  }
+  while(true){var part=await reader.read();if(part.done)break;buffer+=decoder.decode(part.value,{stream:true});var newline;
+   while((newline=buffer.indexOf("\n"))!==-1){var line=buffer.slice(0,newline).replace(/\r$/,"");buffer=buffer.slice(newline+1);handleLine(line);}
+  }
+  buffer+=decoder.decode();if(buffer.trim())handleLine(buffer.replace(/\r$/,""));
+  if(!assistant.content.trim())throw new Error("The model did not return a text response.");
+ }catch(error){
+  if(controller.signal.aborted){assistant.streaming=false;assistant.stopped=!!assistant.content.trim();if(!assistant.content.trim()&&chat.messages[chat.messages.length-1]===assistant)chat.messages.pop();toast("Generation stopped.");}
+  else{assistant.streaming=false;assistant.interrupted=!!assistant.content.trim();if(!assistant.content.trim())assistant.content="I couldn't complete that request. "+(error&&error.message?error.message:"Connection error.");else toast("The stream was interrupted. You can regenerate the answer.");}
+ }finally{
+  assistant.streaming=false;busy=false;activeContent=null;activeAssistant=null;if(abortController===controller)abortController=null;save();render();resize();
+ }
+}
+async function send(text){
+ var prompt=text.trim();if(!prompt||busy)return;var chat=current();
+ if(!chat){active=uid();chat={id:active,title:"New conversation",model:modelId(),messages:[]};chats.unshift(chat);}
+ chat.model=modelId();if(!chat.messages.length)chat.title=prompt.slice(0,40)+(prompt.length>40?"…":"");
+ chat.messages.push({role:"user",content:prompt});$("prompt").value="";resize();save();await runGeneration(chat);
+}
+function regenerate(index){if(busy)return;var chat=current();if(!chat||index!==chat.messages.length-1||chat.messages[index].role!=="assistant")return;chat.messages.pop();save();runGeneration(chat);}
+$("newChat").addEventListener("click",newChat);
+$("form").addEventListener("submit",function(e){e.preventDefault();if(busy){stopGeneration();return;}send($("prompt").value);});
+$("prompt").addEventListener("input",resize);
+$("prompt").addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();if(!busy&&!$("send").disabled)send($("prompt").value);}});
+$("model").addEventListener("change",function(){setModel(modelId());var c=current();if(c){c.model=modelId();save();render();}});
+function openSettings(){$("defaultModel").value=prefs.model;$("overlay").classList.add("open");}
+function closeSettings(){$("overlay").classList.remove("open");}
+$("settings").addEventListener("click",openSettings);$("settingsSide").addEventListener("click",openSettings);$("close").addEventListener("click",closeSettings);
+$("overlay").addEventListener("click",function(e){if(e.target===$("overlay"))closeSettings();});
+$("defaultModel").addEventListener("change",function(e){setModel(e.target.value);});
+$("clear").addEventListener("click",function(){if(confirm("Clear all conversations saved in this browser?")){if(busy)stopGeneration();chats=[];active=null;save();render();$("side").classList.remove("open");}});
+$("menu").addEventListener("click",function(){$("side").classList.toggle("open");});
+document.querySelectorAll(".suggestion").forEach(function(b){b.addEventListener("click",function(){send(b.dataset.prompt);});});
+$("messages").addEventListener("click",async function(e){
+ var copy=e.target.closest("[data-copy]"),codeCopy=e.target.closest("[data-copy-code]"),regen=e.target.closest("[data-regenerate]");
+ try{
+  if(codeCopy){var block=codeCopy.closest(".code-block");await navigator.clipboard.writeText(block.querySelector("code").textContent);toast("Code copied.");return;}
+  if(copy){var c=current();await navigator.clipboard.writeText(c.messages[Number(copy.dataset.copy)].content);toast("Response copied.");return;}
+  if(regen)regenerate(Number(regen.dataset.regenerate));
+ }catch(err){toast("Clipboard unavailable.");}
+});
 setModel(MODELS[prefs.model]?prefs.model:"nvidia/nemotron-3.5-lightning:free");if(chats.length)active=chats[0].id;render();resize();
 })();
 </script></body></html>
