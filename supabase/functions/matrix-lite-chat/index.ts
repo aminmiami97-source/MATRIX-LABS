@@ -141,7 +141,7 @@ Deno.serve(async (request: Request) => {
     return reply(405, { error: "Only POST requests are supported." });
   }
 
-  const routerKey = Deno.env.get("MATRIX_LITE_OPENROUTER_KEY");
+  const routerKey = Deno.env.get("MATRIX_LITE_OPENROUTER_KEY") ?? Deno.env.get("MATRIX_AI_ROUTER_KEY");
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   if (!routerKey || !supabaseUrl) {
     return reply(503, {
