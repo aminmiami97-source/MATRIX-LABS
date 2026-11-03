@@ -92,14 +92,21 @@ async function consumeRateLimit(
   supabaseServerKey: string,
 ): Promise<{ allowed: boolean; reason: string; remainingToday: number; resetAt: string }> {
   const ipHash = await hashIp(ip, serverSalt);
+  const rpcHeaders = new Headers({
+    "apikey": supabaseServerKey,
+    "Content-Type": "application/json",
+  });
+  // Legacy service-role keys are JWTs and need Authorization as well.
+  // New sb_secret keys are non-JWT credentials and must use apikey only.
+  if (supabaseServerKey.split(".").length === 3) {
+    rpcHeaders.set("Authorization", `Bearer ${supabaseServerKey}`);
+  }
+
   const response = await fetch(
     supabaseUrl.replace(/\/$/, "") + "/rest/v1/rpc/matrix_lite_consume_request",
     {
       method: "POST",
-      headers: {
-        "apikey": supabaseServerKey,
-        "Content-Type": "application/json",
-      },
+      headers: rpcHeaders,
       body: JSON.stringify({ p_ip_hash: ipHash }),
       signal: AbortSignal.timeout(8_000),
     },
