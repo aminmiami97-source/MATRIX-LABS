@@ -15,6 +15,9 @@
         },
         {
           "url": "https://accounts.google.com/o/oauth2/**"
+        },
+        {
+          "url": "https://github.com/aminmiami97-source/MATRIX-LABS/releases/**"
         }
       ]
     },
