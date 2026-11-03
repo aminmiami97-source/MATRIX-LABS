@@ -155,6 +155,7 @@ function savePrefs(){try{localStorage.setItem("matrixLite.prefs",JSON.stringify(
 function savePrompts(){try{localStorage.setItem("matrixLite.prompts",JSON.stringify(prompts));}catch(e){}}
 function uid(){return crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random();}
 function current(){return chats.find(function(c){return c.id===active;});}
+function modelId(){return $("model").value;}
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
 function toast(t){$("toast").textContent=t;$("toast").classList.add("show");clearTimeout(toast.timer);toast.timer=setTimeout(function(){$("toast").classList.remove("show");},2300);}
 function applyTheme(){document.body.dataset.theme=prefs.theme==="light"?"light":"dark";document.body.dataset.accent=["green","blue","violet","orange"].includes(prefs.accent)?prefs.accent:"green";document.body.dataset.font=["small","medium","large"].includes(prefs.fontSize)?prefs.fontSize:"medium";document.body.classList.toggle("compact",!!prefs.compact);}
