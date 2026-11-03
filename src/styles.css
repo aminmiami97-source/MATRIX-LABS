@@ -1436,3 +1436,28 @@ body {
   .workspace-metric { padding:12px; }
   .workspace-metric > strong { font-size:22px; }
 }
+
+
+/* MATRIX LABS release notifications */
+.update-banner {
+  display:flex; align-items:center; gap:12px; margin:14px 22px 0; padding:12px 14px;
+  border:1px solid rgba(105,205,232,.28); border-radius:10px;
+  background:linear-gradient(110deg,rgba(54,151,180,.12),rgba(123,100,196,.09));
+  box-shadow:0 8px 28px rgba(0,0,0,.12);
+}
+.update-banner-icon { width:32px;height:32px;display:grid;place-items:center;border-radius:9px;background:rgba(91,190,220,.13);color:#8bdcf4;flex:0 0 auto; }
+.update-banner-copy { display:flex;flex:1;min-width:0;flex-direction:column;gap:3px; }
+.update-banner-copy strong { color:#e7f8ff;font-size:11px;font-weight:650; }
+.update-banner-copy span,.update-status { color:#a8b7bd;font-size:10px; }
+.update-download { flex:0 0 auto; }
+.update-dismiss { border:0;background:transparent;color:#8e9ba2;padding:6px;display:grid;place-items:center;cursor:pointer; }
+.update-controls { display:flex;flex-wrap:wrap;gap:8px;margin-top:12px; }
+.update-status { margin:9px 0 0; }
+.update-spin { animation:matrix-update-spin 1s linear infinite; }
+@keyframes matrix-update-spin { to { transform:rotate(360deg); } }
+@media(max-width:680px) {
+  .update-banner { margin:10px 12px 0;align-items:flex-start;flex-wrap:wrap; }
+  .update-banner-copy { min-width:calc(100% - 52px); }
+  .update-download { margin-left:44px; }
+  .update-dismiss { margin-left:auto; }
+}
