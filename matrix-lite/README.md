@@ -1,4 +1,4 @@
-# MATRIX LITE — v1.0.0
+# MATRIX LITE — v1.1.0
 
 MATRIX LITE is a responsive AI chat website with exactly two model choices. Visitors do not enter or provide an API key. Every chat request is routed through a Supabase Edge Function that uses the owner's server-side OpenRouter key.
 
