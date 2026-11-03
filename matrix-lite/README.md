@@ -37,7 +37,7 @@ Do not paste the OpenRouter key into source code, GitHub, a website setting expo
 
 The backend enforces:
 - A global maximum of 40 allowed chat requests per UTC day.
-- A maximum of 10 requests per client IP per rolling hour bucket (hourly window).
+- A maximum of 10 requests per client IP per UTC hour bucket (hourly window).
 - Only the two listed free model IDs are accepted.
 - Message count, total size, per-message length, token output and request timeout are bounded.
 - If the database-backed rate limiter is unavailable, chat fails closed.
