@@ -1,0 +1,32 @@
+name: MATRIX LITE browser checks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "matrix-lite/index.html"
+      - "scripts/validate-matrix-lite.mjs"
+      - ".github/workflows/matrix-lite-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install DOM test environment
+        run: npm install --no-save --no-package-lock jsdom@26
+      - name: Check inline JavaScript syntax
+        run: |
+          node --input-type=module -e "import {readFileSync,writeFileSync} from 'node:fs'; const h=readFileSync('matrix-lite/index.html','utf8'); const a=h.indexOf('<script>')+8; const b=h.indexOf('</script>',a); if(a<8||b<a) throw new Error('Inline script not found'); writeFileSync('/tmp/matrix-lite-inline.js',h.slice(a,b));"
+          node --check /tmp/matrix-lite-inline.js
+      - name: Run MATRIX LITE interaction checks
+        run: node scripts/validate-matrix-lite.mjs
