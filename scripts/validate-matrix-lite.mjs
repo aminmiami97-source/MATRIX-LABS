@@ -193,7 +193,8 @@ try {
   const finalMenu = window.document.querySelector(".chat-menu");
   finalMenu.querySelector("summary").click();
   [...finalMenu.querySelectorAll(".menu-items button")].find((b) => b.textContent === "Delete").click();
-  assert.equal(window.document.querySelectorAll(".chat-row").length, 0, "Delete should remove a conversation");
+  assert.equal(window.document.querySelectorAll(".chat-row").length, 1, "Delete should remove only the selected conversation");
+  assert.equal([...window.document.querySelectorAll(".chat-title")].some((b) => b.textContent === "New conversation"), false, "Deleted conversation should no longer appear in history");
   console.log("MATRIX LITE v1.3.0 browser checks passed.");
 } finally {
   window.close();
