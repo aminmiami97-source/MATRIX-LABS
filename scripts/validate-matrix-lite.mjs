@@ -16,6 +16,7 @@ const ids = [
 for (const id of ids) assert.ok(html.includes(`id="${id}"`), `Missing #${id}`);
 
 let fetchCalls = 0;
+let holdNextResponse = false;
 const tick = String.fromCharCode(96);
 const sample = [
   "## Streaming works",
@@ -30,8 +31,14 @@ const sample = [
   tick.repeat(3),
 ].join("\n");
 
-function mockFetch(_url, _options) {
+function mockFetch(_url, options) {
   fetchCalls++;
+  if (holdNextResponse) {
+    holdNextResponse = false;
+    return new Promise((_resolve, reject) => {
+      options.signal.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
+    });
+  }
   const events = [
     "data: " + JSON.stringify({ choices: [{ delta: { content: sample } }] }) + "\n\n",
     "data: [DONE]\n\n",
@@ -68,6 +75,8 @@ const dom = new JSDOM(html, {
       configurable: true,
       value: { writeText: async () => {} },
     });
+    window.URL.createObjectURL = () => "blob:matrix-test";
+    window.URL.revokeObjectURL = () => {};
   },
 });
 const { window } = dom;
@@ -110,6 +119,13 @@ try {
   regenerate.click();
   await waitFor(() => fetchCalls === 3 && window.document.querySelector(".message.assistant:not(.streaming)"), "regenerated reply");
 
+  holdNextResponse = true;
+  $("prompt").value = "Stop this response";
+  submit();
+  await waitFor(() => fetchCalls === 4 && window.document.querySelector(".message.assistant.streaming"), "stop request start");
+  $("send").click();
+  await waitFor(() => !window.document.querySelector(".message.assistant.streaming") && $("send").textContent === "↑", "generation stop");
+
   $("searchChats").value = "edited";
   $("searchChats").dispatchEvent(new window.Event("input", { bubbles: true }));
   assert.ok(window.document.querySelector(".chat-row"), "Search should keep matching conversations visible");
@@ -127,7 +143,22 @@ try {
   rename.click();
   assert.match(window.document.querySelector(".chat-title").textContent, /renamed/, "Rename should update the chat title");
 
+  const getMenu = () => window.document.querySelector(".chat-menu");
+  getMenu().querySelector("summary").click();
+  [...getMenu().querySelectorAll(".menu-items button")].find((b) => b.textContent === "Archive").click();
+  assert.equal($("countArchived").textContent, "1", "Archive should move a chat into Archived");
+  window.document.querySelector('[data-view="archived"]').click();
+  getMenu().querySelector("summary").click();
+  [...getMenu().querySelectorAll(".menu-items button")].find((b) => b.textContent === "Restore").click();
+  window.document.querySelector('[data-view="all"]').click();
+
+  $("exportCurrent").click();
+  $("exportAll").click();
+
   $("settings").click();
+  $("defaultModel").value = "nvidia/nemotron-3.5-super-vl:free";
+  $("defaultModel").dispatchEvent(new window.Event("change", { bubbles: true }));
+  assert.equal($("model").value, "nvidia/nemotron-3.5-super-vl:free", "Changing the default model should update the model selector");
   $("theme").value = "light";
   $("theme").dispatchEvent(new window.Event("change", { bubbles: true }));
   assert.equal(window.document.body.dataset.theme, "light", "Light theme should apply immediately");
@@ -157,6 +188,12 @@ try {
 
   assert.equal(window.localStorage.getItem("matrixLite.prefs") !== null, true, "Preferences should persist locally");
   assert.equal(window.localStorage.getItem("matrixLite.prompts") !== null, true, "Custom prompts should persist locally");
+  $("newChat").click();
+  assert.equal($("model").value, "nvidia/nemotron-3.5-super-vl:free", "New chats should use the saved default model");
+  const finalMenu = window.document.querySelector(".chat-menu");
+  finalMenu.querySelector("summary").click();
+  [...finalMenu.querySelectorAll(".menu-items button")].find((b) => b.textContent === "Delete").click();
+  assert.equal(window.document.querySelectorAll(".chat-row").length, 0, "Delete should remove a conversation");
   console.log("MATRIX LITE v1.3.0 browser checks passed.");
 } finally {
   window.close();
