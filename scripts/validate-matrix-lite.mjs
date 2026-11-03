@@ -89,6 +89,7 @@ try {
   submit();
   await waitFor(() => window.document.querySelector(".message.assistant:not(.streaming)"), "first streamed answer");
   assert.equal(fetchCalls, 1, "A chat message should call the chat backend once");
+  console.log("Rendered assistant HTML:", window.document.querySelector(".message.assistant .content")?.innerHTML);
   assert.ok(window.document.querySelector(".message.assistant h2"), "Markdown headings should render");
   assert.ok(window.document.querySelector(".message.assistant strong"), "Bold Markdown should render");
   assert.ok(window.document.querySelector(".message.assistant ul li"), "Markdown lists should render");
