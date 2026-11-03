@@ -163,7 +163,7 @@ function setModel(v){if(!MODELS[v])return;$("model").value=v;$("modelNote").text
 function inlineMarkdown(source){
  var tick=String.fromCharCode(96),cp=new RegExp(tick+"([^"+tick+"\\n]+)"+tick,"g"),tokens=[];
  var raw=String(source).replace(cp,function(_,code){tokens.push({kind:"code",value:code});return "@@TOKEN"+(tokens.length-1)+"@@";});
- var lp=new RegExp("\\\\[([^\\\\]]+)\\\\]\\\\((https?:\\\\/\\\\/[^\\\\s)]+)\\\\)","g");
+ var lp=new RegExp("\\[([^\]]+)\\]\((https?:\/\/[^\s)]+)\)","g");
  raw=raw.replace(lp,function(_,label,url){tokens.push({kind:"link",label:label,url:url});return "@@TOKEN"+(tokens.length-1)+"@@";});
  var safe=esc(raw).replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").replace(/__(.+?)__/g,"<strong>$1</strong>");
  safe=safe.replace(/~~(.+?)~~/g,"<del>$1</del>").replace(/\*([^*\n]+)\*/g,"<em>$1</em>").replace(/_([^_\n]+)_/g,"<em>$1</em>");
