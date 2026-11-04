@@ -2,7 +2,7 @@ name: Build Windows installer
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/matrix-labs-8.0-ui-rework]
     tags: ['v*']
     paths:
       - 'src/**'
