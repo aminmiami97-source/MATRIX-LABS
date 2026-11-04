@@ -366,3 +366,23 @@ nav { gap:5px; }
   .update-download { margin-left:42px; }
   .auth-card { padding:25px 19px; border-radius:17px; }
 }
+
+/* Overview dashboard components */
+.stat > strong.dashboard-model { max-width:100%; font-size:clamp(15px,1.6vw,21px); letter-spacing:-.035em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dashboard-shortcuts { display:grid; margin-top:14px; }
+.dashboard-shortcuts button {
+  width:100%; display:flex; align-items:center; gap:11px; padding:13px 2px;
+  border:0; border-top:1px solid var(--line); background:transparent; text-align:left;
+  color:#e9e2fa; transition:background .16s ease,padding .16s ease;
+}
+.dashboard-shortcuts button:hover { padding-left:7px; background:rgba(148,112,255,.06); }
+.dashboard-shortcuts button > span:nth-child(2) { flex:1; min-width:0; display:grid; gap:4px; }
+.dashboard-shortcuts strong { font-size:11px; font-weight:600; }
+.dashboard-shortcuts small { color:#a49bb9; font-size:9px; line-height:1.45; }
+.shortcut-icon { width:34px; height:34px; display:grid; place-items:center; flex:0 0 auto; border:1px solid rgba(174,151,255,.18); border-radius:10px; color:#c5afff; background:rgba(146,111,255,.1); }
+.dashboard-shortcuts button > svg { color:#9689b8; }
+.agent-row small { color:#a99bc8; font:9px var(--mono); white-space:nowrap; }
+@media (max-width:580px) {
+  .stat > strong.dashboard-model { font-size:15px; }
+  .dashboard-shortcuts small { max-width:220px; }
+}
