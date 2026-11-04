@@ -4,11 +4,11 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
-import { ArrowUpRight, CalendarDays, ChevronRight, Coins, Command, Copy, FileText, FolderOpen, LockKeyhole, LogOut, Mail, MessageCircle, Mic, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, RefreshCw, Send, Settings2, ShieldCheck, Users, X } from "lucide-react";
+import { ArrowUpRight, ChevronRight, Coins, Command, Copy, FileText, FolderOpen, Home, LockKeyhole, LogOut, Mail, MessageCircle, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, RefreshCw, Send, Settings2, ShieldCheck, Users, X } from "lucide-react";
 
 const URL = import.meta.env.VITE_SUPABASE_URL?.trim() ?? "";
 const PUBLIC_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? "";
-const APP_VERSION = "7.2.0";
+const APP_VERSION = "8.0.0";
 
 const db = URL && PUBLIC_KEY ? createClient(URL, PUBLIC_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } }) : null;
 
@@ -18,6 +18,7 @@ const MODELS = [
 ] as const;
 
 const navItems = [
+  { id: "home", label: "Overview", icon: Home },
   { id: "chat", label: "Chat", icon: MessageCircle },
   { id: "agents", label: "Workspace", icon: Users },
   { id: "plugins", label: "Plugins", icon: Mail },
@@ -29,7 +30,7 @@ type Agent = { id: string; name: string; purpose: string; personality: string };
 type EmailDraft = { to: string; subject: string; body: string };
 type Attachment = { id: string; file: File; extractedText: string };
 type Message = { id: string; role: "user" | "assistant"; content: string; emailDraft?: EmailDraft };
-type Page = "chat" | "agents" | "settings" | "plugins" | "permissions" | "credits";
+type Page = "home" | "chat" | "agents" | "settings" | "plugins" | "permissions" | "credits";
 
 function localKey(uid: string, part: string) { return "matrix." + uid + "." + part; }
 function read<T>(key: string, fallback: T): T {
@@ -113,7 +114,7 @@ export default function NetworkApp() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
 
-  const [page, setPage] = useState<Page>("chat");
+  const [page, setPage] = useState<Page>("home");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => read("matrix.ui.sidebarCollapsed", false));
   const [agentPanelCollapsed, setAgentPanelCollapsed] = useState(() => read("matrix.ui.agentPanelCollapsed", false));
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -509,7 +510,7 @@ export default function NetworkApp() {
     } finally { setAuthBusy(false); }
   }
 
-  async function signOut() { await db?.auth.signOut(); setPage("chat"); }
+  async function signOut() { await db?.auth.signOut(); setPage("home"); }
   async function continueAsGuest() {
     if (!db || authBusy) return;
     setAuthBusy(true); setAuthError("");
@@ -716,18 +717,53 @@ export default function NetworkApp() {
     <aside className={sidebarCollapsed ? "sidebar collapsed" : "sidebar"}>
       <div className="brand"><div className="brand-mark"><Command size={17} /></div><div><strong>MATRIX</strong><span>LABS</span></div><button className="sidebar-toggle" type="button" onClick={() => setSidebarCollapsed(value => !value)} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}>{sidebarCollapsed ? <PanelLeftOpen size={12} /> : <PanelLeftClose size={12} />}</button></div>
       <div className="workspace-switch"><div className="workspace-avatar">{initials(session.user.user_metadata?.display_name || session.user.email || "M")}</div><div><strong>{session.user.user_metadata?.display_name || "MATRIX member"}</strong><span>Personal workspace</span></div><ChevronRight size={11} /></div>
-      <div className="nav-label">MESSAGES</div>
+      <div className="nav-label">NAVIGATION</div>
       <nav>{navItems.map(item => { const Icon = item.icon; return <button key={item.id} className={page === item.id ? "nav-item active" : "nav-item"} onClick={() => setPage(item.id)}><Icon size={14} /><span>{item.label}</span>{item.id === "agents" && agents.length > 0 && <small>{agents.length}</small>}</button>; })}</nav>
       <div className="agent-sidebar-head"><div className="nav-label">YOUR AGENTS</div><button className="sidebar-add" onClick={() => setCreateOpen(true)} title="Create agent"><Plus size={11} /></button></div>
       <div className="sidebar-agent-list">{agents.map(agent => <button key={agent.id} className={page === "chat" && activeAgent?.id === agent.id ? "agent-nav active" : "agent-nav"} onClick={() => { setSelectedId(agent.id); setPage("chat"); }}><div className="tiny-avatar">{initials(agent.name)}</div><span>{agent.name}</span><i /></button>)}{agents.length === 0 && <div className="sidebar-empty">No conversations yet</div>}</div>
       <div className="sidebar-spacer" />
       {session.user.is_anonymous ? <div className="credit-mini guest-credit"><Users size={11} /><span>GUEST · {guestRemaining}/10 LEFT</span></div> : <button className="credit-mini" onClick={() => setPage("credits")}><Coins size={11} /><span>{credits === null ? "—" : credits.toLocaleString()} MATRIX CRD</span><ArrowUpRight size={10} /></button>}
-      <div className="sidebar-profile"><div className="profile-circle">{initials(session.user.user_metadata?.display_name || session.user.email || "M")}</div><div><strong>{session.user.is_anonymous ? "Guest" : session.user.email}</strong><span>{session.user.is_anonymous ? "Guest session · V7.2.0" : "Signed in · V7.2.0"}</span></div><button onClick={signOut} title="Sign out"><LogOut size={13} /></button></div>
+      <div className="sidebar-profile"><div className="profile-circle">{initials(session.user.user_metadata?.display_name || session.user.email || "M")}</div><div><strong>{session.user.is_anonymous ? "Guest" : session.user.email}</strong><span>{session.user.is_anonymous ? "Guest session · V" + APP_VERSION : "Signed in · V" + APP_VERSION}</span></div><button onClick={signOut} title="Sign out"><LogOut size={13} /></button></div>
     </aside>
     <main className="main-area">
-      <header className="topbar"><div className="topbar-leading"><button className="icon-button topbar-sidebar-toggle" type="button" onClick={() => setSidebarCollapsed(value => !value)} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}>{sidebarCollapsed ? <PanelLeftOpen size={13} /> : <PanelLeftClose size={13} />}</button><div className="breadcrumbs"><span>Workspace</span><ChevronRight size={11} /><strong>{page === "chat" ? activeAgent?.name ?? "Chat" : page === "credits" ? "MATRIX Credits" : page[0].toUpperCase() + page.slice(1)}</strong></div></div><div className="topbar-actions"><button className="icon-button" type="button" onClick={() => setAgentPanelCollapsed(value => !value)} title={agentPanelCollapsed ? "Show agent details" : "Hide agent details"} aria-label={agentPanelCollapsed ? "Show agent details" : "Hide agent details"}>{agentPanelCollapsed ? <PanelRightOpen size={12} /> : <PanelRightClose size={12} />}</button><div className="local-mode"><i /> {session.user.is_anonymous ? "GUEST MODE" : "ACCOUNT CONNECTED"}</div>{session.user.is_anonymous ? <div className="top-credits"><Users size={12} /><strong>{guestRemaining}/10</strong><span>LEFT</span></div> : <button className="top-credits" onClick={() => setPage("credits")}><Coins size={12} /><strong>{credits ?? "—"}</strong><span>CRD</span></button>}</div></header>
+      <header className="topbar"><div className="topbar-leading"><button className="icon-button topbar-sidebar-toggle" type="button" onClick={() => setSidebarCollapsed(value => !value)} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}>{sidebarCollapsed ? <PanelLeftOpen size={13} /> : <PanelLeftClose size={13} />}</button><div className="breadcrumbs"><span>Workspace</span><ChevronRight size={11} /><strong>{page === "home" ? "Overview" : page === "chat" ? activeAgent?.name ?? "Chat" : page === "credits" ? "MATRIX Credits" : page[0].toUpperCase() + page.slice(1)}</strong></div></div><div className="topbar-actions">{page === "chat" && <button className="icon-button" type="button" onClick={() => setAgentPanelCollapsed(value => !value)} title={agentPanelCollapsed ? "Show agent details" : "Hide agent details"} aria-label={agentPanelCollapsed ? "Show agent details" : "Hide agent details"}>{agentPanelCollapsed ? <PanelRightOpen size={12} /> : <PanelRightClose size={12} />}</button>}<div className="local-mode"><i /> {session.user.is_anonymous ? "GUEST MODE" : "ACCOUNT CONNECTED"}</div>{session.user.is_anonymous ? <div className="top-credits"><Users size={12} /><strong>{guestRemaining}/10</strong><span>LEFT</span></div> : <button className="top-credits" onClick={() => setPage("credits")}><Coins size={12} /><strong>{credits ?? "—"}</strong><span>CRD</span></button>}</div></header>
       {updateInfo && !updateDismissed && <div className="update-banner" role="status"><div className="update-banner-icon"><RefreshCw size={15} /></div><div className="update-banner-copy"><strong>MATRIX LABS v{updateInfo.version} is available</strong><span>Verified in-app update ready to install.</span></div><button className="button primary update-download" type="button" onClick={() => void installUpdate()} disabled={updateDownloading}>{updateDownloading ? "Installing…" : "Update now"} <ArrowUpRight size={12} /></button><button className="update-dismiss" type="button" onClick={() => setUpdateDismissed(true)} aria-label="Dismiss update notification"><X size={14} /></button></div>}
       <div className={page === "chat" ? "page-content chat-content" : "page-content"}>
+        {page === "home" && <>
+          {title("Your command center.", "Your MATRIX workspace, conversations, and tools at a glance.", createButton)}
+          <section className="hero">
+            <div className="hero-copy">
+              <span className="status-pill"><i /> MATRIX NETWORK READY</span>
+              <h2>Think clearly. <em>Build beyond limits.</em></h2>
+              <p>Your AI workspace is ready. Open a conversation, organize your agents, or manage the services connected to MATRIX LABS.</p>
+              <div className="hero-actions">
+                <button className="button primary" type="button" onClick={() => { if (activeAgent) setPage("chat"); else setCreateOpen(true); }}><MessageCircle size={13} /> {activeAgent ? "Continue chatting" : "Create your first agent"}</button>
+                <button className="button secondary" type="button" onClick={() => setPage("settings")}><Settings2 size={13} /> Workspace settings</button>
+              </div>
+            </div>
+            <div className="hero-art" aria-hidden="true"><div className="orbit orbit-a" /><div className="orbit orbit-b" /><div className="core"><Command size={34} /></div><div className="orbit-top">MATRIX / CORE</div><div className="orbit-bottom">SYSTEM / ONLINE</div></div>
+          </section>
+          <div className="stats">
+            <div className="stat"><Users /><span>YOUR AGENTS</span><strong>{agents.length.toString().padStart(2, "0")}</strong><p>Personal AI profiles</p></div>
+            <div className="stat"><MessageCircle className="blue" /><span>SAVED MESSAGES</span><strong>{Object.values(messages).reduce((total, list) => total + list.length, 0).toLocaleString()}</strong><p>Across your workspace</p></div>
+            <div className="stat"><Coins className="gold" /><span>{session.user.is_anonymous ? "GUEST MESSAGES" : "MATRIX CREDITS"}</span><strong>{session.user.is_anonymous ? guestRemaining + "/10" : credits === null ? "—" : credits.toLocaleString()}</strong><p>{session.user.is_anonymous ? "Remaining in this guest quota" : "Available account balance"}</p></div>
+            <div className="stat"><Command className="violet" /><span>ACTIVE MODEL</span><strong className="dashboard-model">{selectedModel.name}</strong><p>{selectedModel.info}</p></div>
+          </div>
+          <div className="columns">
+            <section className="panel">
+              <div className="panel-head"><div><div className="eyebrow">WORKSPACE</div><h3>Your agents</h3></div><button className="link-button" type="button" onClick={() => setPage("agents")}>Manage agents <ChevronRight size={12} /></button></div>
+              {agents.length === 0 ? <div className="empty"><div className="empty-icon"><Users size={20} /></div><h4>No agents yet</h4><p>Create your first AI profile to start a conversation.</p><button className="button primary" type="button" onClick={() => setCreateOpen(true)}><Plus size={12} /> Create agent</button></div> : <div className="agent-list">{agents.slice(0, 4).map(agent => <button className="agent-row" type="button" key={agent.id} onClick={() => { setSelectedId(agent.id); setPage("chat"); }}><div className="avatar">{initials(agent.name)}</div><div className="agent-text"><strong>{agent.name}</strong><span>{agent.purpose}</span></div><small>{(messages[agent.id] ?? []).length} messages</small><ChevronRight size={13} /></button>)}</div>}
+            </section>
+            <section className="panel">
+              <div className="panel-head"><div><div className="eyebrow">QUICK ACCESS</div><h3>Workspace shortcuts</h3></div></div>
+              <div className="dashboard-shortcuts">
+                <button type="button" onClick={() => setPage("settings")}><span className="shortcut-icon"><Settings2 size={16} /></span><span><strong>Model & settings</strong><small>Choose your AI model and manage your account</small></span><ChevronRight size={13} /></button>
+                <button type="button" onClick={() => setPage("plugins")}><span className="shortcut-icon"><Mail size={16} /></span><span><strong>Connected services</strong><small>Manage your Gmail connection</small></span><ChevronRight size={13} /></button>
+                <button type="button" onClick={() => setPage("permissions")}><span className="shortcut-icon"><ShieldCheck size={16} /></span><span><strong>Privacy & permissions</strong><small>Review what MATRIX LABS can access</small></span><ChevronRight size={13} /></button>
+              </div>
+            </section>
+          </div>
+        </>}
         {page === "agents" && <>
           {title("Your workspace.", "Your agents, conversations, and tools—organized in one place.", createButton)}
           <div className="workspace-metrics">
@@ -742,7 +778,7 @@ export default function NetworkApp() {
           <div className={agentPanelCollapsed ? "chat-layout chat-first-layout agent-panel-collapsed" : "chat-layout chat-first-layout"}><section className="chat-panel panel"><div className="chat-messages" ref={chatScrollRef}>{chat.length === 0 ? <div className="chat-welcome"><div className="avatar welcome-avatar">{initials(activeAgent.name)}</div><h3>Hi, I'm {activeAgent.name}.</h3><p>{activeAgent.purpose}</p><span>Powered by {selectedModel.name}. Choose a model above and say hello.</span></div> : chat.map(message => <div className={message.role === "user" ? "message-row user-message" : "message-row agent-message"} key={message.id}>{message.role !== "user" && <div className="message-avatar">{initials(activeAgent.name)}</div>}<div className="bubble"><span>{message.role === "user" ? "YOU" : activeAgent.name.toUpperCase()}</span><FormattedMessage content={message.content} />{message.emailDraft && <div className="chat-email-draft"><div className="eyebrow">EMAIL DRAFT · REVIEW REQUIRED</div><label>To<input value={message.emailDraft.to} onChange={e => setMessages(current => ({...current,[activeAgent.id]:(current[activeAgent.id]??[]).map(m=>m.id===message.id&&m.emailDraft?{...m,emailDraft:{...m.emailDraft,to:e.target.value}}:m)}))} placeholder="recipient@example.com" type="email" /></label><label>Subject<input value={message.emailDraft.subject} onChange={e => setMessages(current => ({...current,[activeAgent.id]:(current[activeAgent.id]??[]).map(m=>m.id===message.id&&m.emailDraft?{...m,emailDraft:{...m.emailDraft,subject:e.target.value}}:m)}))} /></label><label>Message<textarea rows={6} value={message.emailDraft.body} onChange={e => setMessages(current => ({...current,[activeAgent.id]:(current[activeAgent.id]??[]).map(m=>m.id===message.id&&m.emailDraft?{...m,emailDraft:{...m.emailDraft,body:e.target.value}}:m)}))} /></label><button className="button primary" type="button" disabled={!message.emailDraft.to.trim() || !message.emailDraft.subject.trim() || !message.emailDraft.body.trim() || gmailBusy} onClick={() => void sendChatEmailDraft(message.emailDraft!)}><Mail size={12} /> {gmailBusy ? "Sending…" : "Approve & Send with Gmail"}</button></div>}{message.role === "assistant" && <div className="message-actions"><button type="button" className="message-action" onClick={() => void copyMessage(message)} title="Copy response" aria-label="Copy response"><Copy size={12} /><span>{copiedId === message.id ? "Copied" : "Copy"}</span></button><button type="button" className="message-action" onClick={() => void regenerate(message.id)} disabled={sending || regeneratingId !== null} title="Regenerate response" aria-label="Regenerate response"><RefreshCw size={12} className={regeneratingId === message.id ? "spin" : ""} /><span>{regeneratingId === message.id ? "Regenerating…" : "Regenerate"}</span></button></div>}</div></div>)}{sending && <div className="typing-row" role="status" aria-live="polite"><div className="message-avatar">{initials(activeAgent.name)}</div><span>{activeAgent.name} is thinking</span><i className="typing-dots"><b /><b /><b /></i></div>}{regeneratingId && <div className="stream-status" role="status">Regenerating the selected response…</div>}</div>
             {chatError && <div className="chat-error">{chatError}</div>}
             {attachments.length > 0 && <div className="attachment-list">{attachments.map(item => <div className="attachment-chip" key={item.id}><FileText size={12} /><span title={item.file.name}>{item.file.name}</span><small>{(item.file.size / 1024 / 1024).toFixed(2)} MB</small><button type="button" onClick={() => setAttachments(current => current.filter(x => x.id !== item.id))} aria-label={"Remove " + item.file.name}><X size={12} /></button></div>)}</div>}
-            <form className="composer" onSubmit={send}><input ref={attachmentInput} className="attachment-input" type="file" multiple onChange={e => void addAttachments(e.target.files)} /><button className="attach-button" type="button" onClick={() => attachmentInput.current?.click()} title="Attach files (5 MB max each)" aria-label="Attach files"><Plus size={16} /></button><input value={draft} onChange={e => setDraft(e.target.value)} placeholder={session.user.is_anonymous && guestRemaining === 0 ? "Guest limit reached…" : !session.user.is_anonymous && credits === 0 ? "No MATRIX Credits remaining…" : "Message " + activeAgent.name + "…"} aria-label="Message" /><button className="voice-button" type="button" disabled title="Voice is planned for a later version"><Mic size={13} /></button><button className="send-button" type="submit" disabled={(!draft.trim() && attachments.length === 0) || sending || (session.user.is_anonymous ? guestRemaining < 1 : credits === null || credits < 1)} aria-label="Send message"><Send size={13} /></button></form>
+            <form className="composer" onSubmit={send}><input ref={attachmentInput} className="attachment-input" type="file" multiple onChange={e => void addAttachments(e.target.files)} /><button className="attach-button" type="button" onClick={() => attachmentInput.current?.click()} title="Attach files (5 MB max each)" aria-label="Attach files"><Plus size={16} /></button><input value={draft} onChange={e => setDraft(e.target.value)} placeholder={session.user.is_anonymous && guestRemaining === 0 ? "Guest limit reached…" : !session.user.is_anonymous && credits === 0 ? "No MATRIX Credits remaining…" : "Message " + activeAgent.name + "…"} aria-label="Message" /><button className="send-button" type="submit" disabled={(!draft.trim() && attachments.length === 0) || sending || (session.user.is_anonymous ? guestRemaining < 1 : credits === null || credits < 1)} aria-label="Send message"><Send size={13} /></button></form>
             <div className="chat-footnote"><LockKeyhole size={10} /> {selectedModel.name} · {session.user.is_anonymous ? guestRemaining + " guest messages remaining · 10 per 24 hours" : "1 CRD per successful reply · " + (credits ?? "—") + " CRD available"}</div>
           </section><aside className="agent-info panel"><div className="eyebrow">ABOUT THIS AGENT</div><div className="avatar profile-avatar">{initials(activeAgent.name)}</div><h3>{activeAgent.name}</h3><span className="personality-tag">{activeAgent.personality}</span><div className="info-divider" /><div className="eyebrow">PURPOSE</div><p>{activeAgent.purpose}</p><div className="info-divider" /><div className="permission-mini"><ShieldCheck size={12} /><span><strong>Device access off</strong><small>Chat only. No files, email, or Windows controls.</small></span></div></aside></div>
         </> : <div className="chat-empty panel"><h3>Your chat space is ready.</h3><p>Create an agent to start a conversation.</p><button className="button primary" onClick={() => setCreateOpen(true)}><Plus size={13} /> Create agent</button></div>)}
@@ -777,16 +813,7 @@ export default function NetworkApp() {
               </form>
             </section>}
           </>}
-          <div className="plugin-coming-grid">
-            <section className="plugin-card panel plugin-coming-card">
-              <div className="plugin-card-head"><div className="plugin-brand-icon"><FileText size={22} /></div><div className="plugin-card-title"><div className="eyebrow">PRODUCTIVITY · GOOGLE</div><h3>Google Docs</h3><p>Create, read, and edit documents from your MATRIX LABS workspace.</p></div><span className="coming-tag">COMING SOON</span></div>
-              <div className="plugin-scope"><LockKeyhole size={13} /><span>Not connected yet. Document access will require your permission when this integration launches.</span></div>
-            </section>
-            <section className="plugin-card panel plugin-coming-card">
-              <div className="plugin-card-head"><div className="plugin-brand-icon"><CalendarDays size={22} /></div><div className="plugin-card-title"><div className="eyebrow">PRODUCTIVITY · GOOGLE</div><h3>Google Calendar</h3><p>View your schedule and manage events with your approval.</p></div><span className="coming-tag">COMING SOON</span></div>
-              <div className="plugin-scope"><LockKeyhole size={13} /><span>Not connected yet. Calendar permissions and event controls will be explained before launch.</span></div>
-            </section>
-          </div>
+          <div className="notice muted-notice"><ShieldCheck size={13} /><span>Only integrations with working connections are shown here. Gmail is the currently supported external service.</span></div>
           {gmailError && <div className="provider-alert error-alert">{gmailError}</div>}
           {gmailNotice && <div className="provider-alert success-alert">{gmailNotice}</div>}
         </>}
@@ -794,14 +821,19 @@ export default function NetworkApp() {
         {page === "permissions" && <>
           {title("Your permissions.", "No computer access is enabled in this release.")}
           <section className="permission-status panel"><div className="permission-shield"><ShieldCheck size={21} /></div><div><div className="eyebrow">CURRENT DEVICE STATUS</div><h3>No system permissions granted</h3><p>Agents can chat, but cannot read files, use email, or control Windows.</p></div><span className="safe-tag">PROTECTED</span></section>
-          <div className="permission-list">{[{ icon: FolderOpen, title: "Read files in a selected folder", detail: "Future access will be limited to folders you choose." }, { icon: FileText, title: "Create or edit documents", detail: "Changes will be previewed before anything is written." }, { icon: MessageCircle, title: "Create email drafts", detail: "Account connection and draft review will be required." }].map(row => { const Icon = row.icon; return <div className="permission-row panel" key={row.title}><div className="permission-icon"><Icon size={15} /></div><div className="permission-copy"><h4>{row.title}</h4><p>{row.detail}</p></div><span className="locked-state"><LockKeyhole size={11} /> PLANNED</span></div>; })}</div>
+          <div className="permission-list">
+            <div className="permission-row panel"><div className="permission-icon"><LockKeyhole size={15} /></div><div className="permission-copy"><h4>Windows and system control</h4><p>The app cannot operate other applications or change system settings.</p></div><span className="locked-state"><LockKeyhole size={11} /> DISABLED</span></div>
+            <div className="permission-row panel"><div className="permission-icon"><FolderOpen size={15} /></div><div className="permission-copy"><h4>File access</h4><p>Files are only processed when you explicitly attach them to a conversation.</p></div><span className="locked-state"><LockKeyhole size={11} /> ATTACHMENTS ONLY</span></div>
+            <div className="permission-row panel"><div className="permission-icon"><Mail size={15} /></div><div className="permission-copy"><h4>Gmail sending</h4><p>Available only after you connect Gmail, and each send requires your approval.</p></div><span className="locked-state"><ShieldCheck size={11} /> USER APPROVAL</span></div>
+            <div className="permission-row panel"><div className="permission-icon"><MessageCircle size={15} /></div><div className="permission-copy"><h4>Local workspace data</h4><p>Agent profiles and conversation history are saved in this app's local storage.</p></div><span className="locked-state"><ShieldCheck size={11} /> LOCAL</span></div>
+          </div>
         </>}
         {page === "credits" && <>
           {title("MATRIX Credits.", "Your balance is stored on your account, not on this device.")}
           <section className="credits-banner"><div className="credits-emblem"><Coins size={21} /></div><div><div className="eyebrow">AVAILABLE BALANCE</div><div className="credits-total">{credits ?? "—"} <small>CRD</small></div><p>New accounts receive 300 CRD once. Each successful response costs 1 CRD.</p></div></section>
           <div className="notice muted-notice">Onboarding tasks do not add credits in this version. The server enforces the balance and prevents local edits.</div>
         </>}
-        <footer className="page-footer"><span>MATRIX LABS <i>·</i> YOUR AI WORKSPACE</span><span>V7.2.0</span></footer>
+        <footer className="page-footer"><span>MATRIX LABS <i>·</i> YOUR AI WORKSPACE</span><span>V{APP_VERSION}</span></footer>
       </div>
     </main>
     {createOpen && <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setCreateOpen(false); }}><form className="create-modal" onSubmit={createAgent}>
