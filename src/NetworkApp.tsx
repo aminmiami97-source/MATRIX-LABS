@@ -4,7 +4,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
-import { ArrowUpRight, ChevronRight, Coins, Command, Copy, FileText, FolderOpen, Home, LockKeyhole, LogOut, Mail, MessageCircle, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, RefreshCw, Send, Settings2, ShieldCheck, Users, X } from "lucide-react";
+import { Activity, ArrowRight, ArrowUpRight, ChevronRight, Coins, Command, Copy, FileText, FolderOpen, Home, LockKeyhole, LogOut, Mail, MessageCircle, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, RefreshCw, Send, Settings2, ShieldCheck, Sparkles, Users, X } from "lucide-react";
 
 const URL = import.meta.env.VITE_SUPABASE_URL?.trim() ?? "";
 const PUBLIC_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? "";
@@ -761,39 +761,90 @@ export default function NetworkApp() {
       <div className={page === "chat" ? "page-content chat-content" : "page-content"}>
         {page === "home" && <>
           {title("Your command center.", "Your MATRIX workspace, conversations, and tools at a glance.", createButton)}
-          <section className="hero">
+          <section className="hero dashboard-hero">
             <div className="hero-copy">
               <span className="status-pill"><i /> MATRIX NETWORK READY</span>
-              <h2>Think clearly. <em>Build beyond limits.</em></h2>
-              <p>Your AI workspace is ready. Open a conversation, organize your agents, or manage the services connected to MATRIX LABS.</p>
+              <h2>Make space for <em>what's next.</em></h2>
+              <p>Your workspace is ready. Continue a conversation, create a focused AI assistant, or jump straight into the tools you use most.</p>
               <div className="hero-actions">
-                <button className="button primary" type="button" onClick={() => { if (activeAgent) setPage("chat"); else setCreateOpen(true); }}><MessageCircle size={13} /> {activeAgent ? "Continue chatting" : "Create your first agent"}</button>
-                <button className="button secondary" type="button" onClick={() => setPage("settings")}><Settings2 size={13} /> Workspace settings</button>
+                <button className="button primary" type="button" onClick={() => { if (activeAgent) setPage("chat"); else setCreateOpen(true); }}>
+                  <MessageCircle size={13} /> {activeAgent ? "Continue chatting" : "Create your first agent"}
+                </button>
+                <button className="button secondary" type="button" onClick={() => setPage("agents")}>
+                  <Users size={13} /> Explore workspace
+                </button>
               </div>
             </div>
             <div className="hero-art" aria-hidden="true"><div className="orbit orbit-a" /><div className="orbit orbit-b" /><div className="core"><Command size={34} /></div><div className="orbit-top">MATRIX / CORE</div><div className="orbit-bottom">SYSTEM / ONLINE</div></div>
           </section>
-          <div className="stats">
+          <div className="stats dashboard-stats">
             <div className="stat"><Users /><span>YOUR AGENTS</span><strong>{agents.length.toString().padStart(2, "0")}</strong><p>Personal AI profiles</p></div>
             <div className="stat"><MessageCircle className="blue" /><span>SAVED MESSAGES</span><strong>{Object.values(messages).reduce((total, list) => total + list.length, 0).toLocaleString()}</strong><p>Across your workspace</p></div>
             <div className="stat"><Coins className="gold" /><span>{session.user.is_anonymous ? "GUEST MESSAGES" : "MATRIX CREDITS"}</span><strong>{session.user.is_anonymous ? guestRemaining + "/10" : credits === null ? "—" : credits.toLocaleString()}</strong><p>{session.user.is_anonymous ? "Remaining in this guest quota" : "Available account balance"}</p></div>
             <div className="stat"><Command className="violet" /><span>ACTIVE MODEL</span><strong className="dashboard-model">{selectedModel.name}</strong><p>{selectedModel.info}</p></div>
           </div>
-          <div className="columns">
-            <section className="panel">
-              <div className="panel-head"><div><div className="eyebrow">WORKSPACE</div><h3>Your agents</h3></div><button className="link-button" type="button" onClick={() => setPage("agents")}>Manage agents <ChevronRight size={12} /></button></div>
-              {agents.length === 0 ? <div className="empty"><div className="empty-icon"><Users size={20} /></div><h4>No agents yet</h4><p>Create your first AI profile to start a conversation.</p><button className="button primary" type="button" onClick={() => setCreateOpen(true)}><Plus size={12} /> Create agent</button></div> : <div className="agent-list">{agents.slice(0, 4).map(agent => <button className="agent-row" type="button" key={agent.id} onClick={() => { setSelectedId(agent.id); setPage("chat"); }}><div className="avatar">{initials(agent.name)}</div><div className="agent-text"><strong>{agent.name}</strong><span>{agent.purpose}</span></div><small>{(messages[agent.id] ?? []).length} messages</small><ChevronRight size={13} /></button>)}</div>}
-            </section>
-            <section className="panel">
-              <div className="panel-head"><div><div className="eyebrow">QUICK ACCESS</div><h3>Workspace shortcuts</h3></div></div>
-              <div className="dashboard-shortcuts">
-                <button type="button" onClick={() => setPage("settings")}><span className="shortcut-icon"><Settings2 size={16} /></span><span><strong>Model & settings</strong><small>Choose your AI model and manage your account</small></span><ChevronRight size={13} /></button>
-                <button type="button" onClick={() => setPage("plugins")}><span className="shortcut-icon"><Mail size={16} /></span><span><strong>Connected services</strong><small>Manage your Gmail connection</small></span><ChevronRight size={13} /></button>
-                <button type="button" onClick={() => setPage("permissions")}><span className="shortcut-icon"><ShieldCheck size={16} /></span><span><strong>Privacy & permissions</strong><small>Review what MATRIX LABS can access</small></span><ChevronRight size={13} /></button>
+          <div className="dashboard-layout">
+            <section className="panel dashboard-panel dashboard-conversations">
+              <div className="panel-head">
+                <div><div className="eyebrow">PICK UP WHERE YOU LEFT OFF</div><h3>Your conversations</h3></div>
+                <button className="link-button" type="button" onClick={() => setPage("agents")}>All agents <ChevronRight size={12} /></button>
               </div>
+              {agents.length === 0 ? <div className="empty dashboard-empty">
+                <div className="empty-icon"><Sparkles size={20} /></div>
+                <h4>Your workspace starts here</h4>
+                <p>Create an AI agent to start your first conversation. Your agents and saved messages will appear here.</p>
+                <button className="button primary" type="button" onClick={() => setCreateOpen(true)}><Plus size={12} /> Create your first agent</button>
+              </div> : <div className="dashboard-conversation-list">
+                {[...agents].sort((a, b) => (messages[b.id] ?? []).length - (messages[a.id] ?? []).length).slice(0, 5).map(agent => {
+                  const agentMessages = messages[agent.id] ?? [];
+                  const lastMessage = agentMessages[agentMessages.length - 1];
+                  return <button className="dashboard-conversation" type="button" key={agent.id} onClick={() => { setSelectedId(agent.id); setPage("chat"); }}>
+                    <div className="avatar">{initials(agent.name)}</div>
+                    <span className="dashboard-conversation-copy">
+                      <strong>{agent.name}</strong>
+                      <span>{lastMessage ? (lastMessage.role === "user" ? "You: " : "") + lastMessage.content : agent.purpose}</span>
+                    </span>
+                    <small>{agentMessages.length} {agentMessages.length === 1 ? "message" : "messages"}</small>
+                    <ArrowRight size={14} />
+                  </button>;
+                })}
+                {agents.length > 5 && <button className="dashboard-view-all" type="button" onClick={() => setPage("agents")}>View all {agents.length} agents <ArrowRight size={12} /></button>}
+              </div>}
             </section>
+            <div className="dashboard-side">
+              <section className="panel dashboard-panel dashboard-launchpad">
+                <div className="panel-head"><div><div className="eyebrow">QUICK LAUNCH</div><h3>Go somewhere</h3></div><Sparkles size={16} /></div>
+                <div className="dashboard-launch-list">
+                  <button className="dashboard-launch" type="button" onClick={() => { if (activeAgent) setPage("chat"); else setCreateOpen(true); }}>
+                    <span className="shortcut-icon"><MessageCircle size={16} /></span><span><strong>{activeAgent ? "Open your chat" : "Start a conversation"}</strong><small>{activeAgent ? "Continue with " + activeAgent.name : "Create an agent and get started"}</small></span><ChevronRight size={13} />
+                  </button>
+                  <button className="dashboard-launch" type="button" onClick={() => setCreateOpen(true)}>
+                    <span className="shortcut-icon"><Plus size={16} /></span><span><strong>Create an agent</strong><small>Build a new AI profile for your workflow</small></span><ChevronRight size={13} />
+                  </button>
+                  <button className="dashboard-launch" type="button" onClick={() => setPage("settings")}>
+                    <span className="shortcut-icon"><Settings2 size={16} /></span><span><strong>Model & settings</strong><small>Choose your model and manage your account</small></span><ChevronRight size={13} />
+                  </button>
+                  <button className="dashboard-launch" type="button" onClick={() => setPage("plugins")}>
+                    <span className="shortcut-icon"><Mail size={16} /></span><span><strong>Connected services</strong><small>Manage your Gmail connection</small></span><ChevronRight size={13} />
+                  </button>
+                  <button className="dashboard-launch" type="button" onClick={() => setPage("permissions")}>
+                    <span className="shortcut-icon"><ShieldCheck size={16} /></span><span><strong>Privacy & permissions</strong><small>Review app access and safety controls</small></span><ChevronRight size={13} />
+                  </button>
+                </div>
+              </section>
+              <section className="panel dashboard-panel dashboard-pulse">
+                <div className="panel-head"><div><div className="eyebrow">WORKSPACE PULSE</div><h3>At a glance</h3></div><Activity size={16} /></div>
+                <div className="dashboard-status-list">
+                  <div className="dashboard-status-row"><span>SESSION</span><strong><i />{session.user.is_anonymous ? "Guest session" : "Account connected"}</strong></div>
+                  <div className="dashboard-status-row"><span>ACTIVE MODEL</span><strong>{selectedModel.name}</strong></div>
+                  <div className="dashboard-status-row"><span>{session.user.is_anonymous ? "GUEST QUOTA" : "CREDIT BALANCE"}</span><strong>{session.user.is_anonymous ? guestRemaining + " / 10 messages" : credits === null ? "Loading…" : credits.toLocaleString() + " CRD"}</strong></div>
+                  <div className="dashboard-status-row"><span>APP VERSION</span><strong>v{APP_VERSION}</strong></div>
+                </div>
+              </section>
+            </div>
           </div>
         </>}
+
         {page === "agents" && <>
           {title("Your workspace.", "Your agents, conversations, and tools—organized in one place.", createButton)}
           <div className="workspace-metrics">
