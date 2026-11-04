@@ -8,7 +8,7 @@ import { ArrowUpRight, ChevronRight, Coins, Command, Copy, FileText, FolderOpen,
 
 const URL = import.meta.env.VITE_SUPABASE_URL?.trim() ?? "";
 const PUBLIC_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? "";
-const APP_VERSION = "8.0.1";
+const APP_VERSION = "8.0.2";
 
 const db = URL && PUBLIC_KEY ? createClient(URL, PUBLIC_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } }) : null;
 
@@ -97,6 +97,11 @@ function FormattedMessage({ content }: { content: string }) {
 }
 
 function initials(value: string) { return value.split(/\s+/).slice(0, 2).map(x => x[0]?.toUpperCase() ?? "").join("") || "AI"; }
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+}
 
 export default function NetworkApp() {
   const [session, setSession] = useState<Session | null>(null);
@@ -158,7 +163,7 @@ export default function NetworkApp() {
     setUpdateChecking(true);
     setUpdateMessage("");
     try {
-      const update = await check();
+      const update = await check({ timeout: 30000 });
       if (!update) {
         setUpdateInfo(null);
         setUpdateMessage("You're using the latest version (v" + APP_VERSION + ").");
@@ -178,10 +183,10 @@ export default function NetworkApp() {
     if (updateDownloading) return;
     setUpdateDownloading(true);
     setUpdateProgress(0);
-    setUpdateProgressLabel("Preparing secure update…");
+    setUpdateProgressLabel("Connecting to GitHub…");
     setUpdateMessage("");
     try {
-      const update = await check();
+      const update = await check({ timeout: 30000 });
       if (!update) {
         setUpdateInfo(null);
         setUpdateMessage("You're already using the latest version.");
@@ -197,15 +202,20 @@ export default function NetworkApp() {
           total = event.data.contentLength || 0;
           downloaded = 0;
           setUpdateProgress(0);
-          setUpdateProgressLabel("Downloading update…");
+          setUpdateProgressLabel(total > 0
+            ? "Receiving update… 0 B / " + formatBytes(total)
+            : "Receiving update…");
         } else if (event.event === "Progress") {
           downloaded += event.data.chunkLength;
           setUpdateProgress(total > 0 ? Math.min(100, downloaded / total * 100) : 0);
+          setUpdateProgressLabel(total > 0
+            ? "Downloading… " + formatBytes(downloaded) + " / " + formatBytes(total)
+            : "Downloading… " + formatBytes(downloaded) + " received");
         } else if (event.event === "Finished") {
           setUpdateProgress(100);
-          setUpdateProgressLabel("Download complete. Installing…");
+          setUpdateProgressLabel("Download complete. Verifying and installing…");
         }
-      });
+      }, { timeout: 180000, restartAfterInstall: true });
       setUpdateProgress(100);
       setUpdateProgressLabel("Installed. Restarting MATRIX LABS…");
       try {
