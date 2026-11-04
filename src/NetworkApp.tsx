@@ -10,15 +10,6 @@ const URL = import.meta.env.VITE_SUPABASE_URL?.trim() ?? "";
 const PUBLIC_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? "";
 const APP_VERSION = "7.2.0";
 
-function compareVersions(a: string, b: string) {
-  const left = a.replace(/^v/i, "").split(".").map(Number);
-  const right = b.replace(/^v/i, "").split(".").map(Number);
-  for (let i = 0; i < Math.max(left.length, right.length); i++) {
-    const delta = (left[i] || 0) - (right[i] || 0);
-    if (delta !== 0) return Math.sign(delta);
-  }
-  return 0;
-}
 const db = URL && PUBLIC_KEY ? createClient(URL, PUBLIC_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } }) : null;
 
 const MODELS = [
