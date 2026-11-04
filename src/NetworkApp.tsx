@@ -8,7 +8,7 @@ import { ArrowUpRight, ChevronRight, Coins, Command, Copy, FileText, FolderOpen,
 
 const URL = import.meta.env.VITE_SUPABASE_URL?.trim() ?? "";
 const PUBLIC_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? "";
-const APP_VERSION = "7.2.0";
+const APP_VERSION = "8.0.0";
 
 const db = URL && PUBLIC_KEY ? createClient(URL, PUBLIC_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } }) : null;
 
