@@ -65,12 +65,10 @@ jobs:
           if (-not $tag.StartsWith("v")) { $tag = "v$tag" }
           $installer = Get-ChildItem "src-tauri/target/release/bundle/nsis/*.exe" | Select-Object -First 1
           if (-not $installer) { throw "NSIS installer was not generated." }
-          $updaterArchive = Get-ChildItem "src-tauri/target/release/bundle/nsis/*.nsis.zip" | Select-Object -First 1
-          if (-not $updaterArchive) { throw "Tauri updater archive (*.nsis.zip) was not generated. Check createUpdaterArtifacts in tauri.conf.json." }
-          $signaturePath = "$($updaterArchive.FullName).sig"
-          if (-not (Test-Path $signaturePath)) { throw "Updater archive signature was not generated. Check the TAURI_SIGNING_PRIVATE_KEY GitHub secret." }
+          $signaturePath = "$($installer.FullName).sig"
+          if (-not (Test-Path $signaturePath)) { throw "Signed NSIS installer was not generated. Check the TAURI_SIGNING_PRIVATE_KEY GitHub secret." }
           $signature = (Get-Content $signaturePath -Raw).Trim()
-          $downloadUrl = "https://github.com/aminmiami97-source/MATRIX-LABS/releases/download/$tag/$($updaterArchive.Name)"
+          $downloadUrl = "https://github.com/aminmiami97-source/MATRIX-LABS/releases/download/$tag/$($installer.Name)"
           $manifest = @{
             version = $version
             notes = "MATRIX LABS $tag"
@@ -90,8 +88,6 @@ jobs:
           path: |
             src-tauri/target/release/bundle/nsis/*.exe
             src-tauri/target/release/bundle/nsis/*.exe.sig
-            src-tauri/target/release/bundle/nsis/*.nsis.zip
-            src-tauri/target/release/bundle/nsis/*.nsis.zip.sig
             src-tauri/target/release/bundle/nsis/latest.json
           if-no-files-found: error
           retention-days: 7
@@ -106,6 +102,4 @@ jobs:
           files: |
             src-tauri/target/release/bundle/nsis/*.exe
             src-tauri/target/release/bundle/nsis/*.exe.sig
-            src-tauri/target/release/bundle/nsis/*.nsis.zip
-            src-tauri/target/release/bundle/nsis/*.nsis.zip.sig
             src-tauri/target/release/bundle/nsis/latest.json
