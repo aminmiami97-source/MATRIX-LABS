@@ -4,7 +4,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
-import { ArrowUpRight, ChevronRight, Coins, Command, Copy, FileText, LockKeyhole, LogOut, Mail, MessageCircle, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, RefreshCw, Send, Settings2, ShieldCheck, Users, X } from "lucide-react";
+import { ArrowUpRight, ChevronRight, Coins, Command, Copy, FileText, FolderOpen, LockKeyhole, LogOut, Mail, MessageCircle, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, RefreshCw, Send, Settings2, ShieldCheck, Users, X } from "lucide-react";
 
 const URL = import.meta.env.VITE_SUPABASE_URL?.trim() ?? "";
 const PUBLIC_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? "";
