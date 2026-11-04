@@ -1,6 +1,6 @@
 # MATRIX LABS
 
-**A chat-first Windows AI workspace with named agents, shared models, and account-based MATRIX Credits.**
+**A chat-first Windows AI workspace with named agents, shared models, and account-based MATRIX Credits.**\n\n> Current test build: **v7.1.0**. This is a release-check test version.
 
 MATRIX LABS is a Windows desktop application built with Tauri 2, Rust, React, and TypeScript. Users can create personal AI agents, customize their personalities, and chat with the available MATRIX models.
 
