@@ -717,7 +717,7 @@ export default function NetworkApp() {
     <aside className={sidebarCollapsed ? "sidebar collapsed" : "sidebar"}>
       <div className="brand"><div className="brand-mark"><Command size={17} /></div><div><strong>MATRIX</strong><span>LABS</span></div><button className="sidebar-toggle" type="button" onClick={() => setSidebarCollapsed(value => !value)} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}>{sidebarCollapsed ? <PanelLeftOpen size={12} /> : <PanelLeftClose size={12} />}</button></div>
       <div className="workspace-switch"><div className="workspace-avatar">{initials(session.user.user_metadata?.display_name || session.user.email || "M")}</div><div><strong>{session.user.user_metadata?.display_name || "MATRIX member"}</strong><span>Personal workspace</span></div><ChevronRight size={11} /></div>
-      <div className="nav-label">MESSAGES</div>
+      <div className="nav-label">NAVIGATION</div>
       <nav>{navItems.map(item => { const Icon = item.icon; return <button key={item.id} className={page === item.id ? "nav-item active" : "nav-item"} onClick={() => setPage(item.id)}><Icon size={14} /><span>{item.label}</span>{item.id === "agents" && agents.length > 0 && <small>{agents.length}</small>}</button>; })}</nav>
       <div className="agent-sidebar-head"><div className="nav-label">YOUR AGENTS</div><button className="sidebar-add" onClick={() => setCreateOpen(true)} title="Create agent"><Plus size={11} /></button></div>
       <div className="sidebar-agent-list">{agents.map(agent => <button key={agent.id} className={page === "chat" && activeAgent?.id === agent.id ? "agent-nav active" : "agent-nav"} onClick={() => { setSelectedId(agent.id); setPage("chat"); }}><div className="tiny-avatar">{initials(agent.name)}</div><span>{agent.name}</span><i /></button>)}{agents.length === 0 && <div className="sidebar-empty">No conversations yet</div>}</div>
@@ -741,7 +741,7 @@ export default function NetworkApp() {
                 <button className="button secondary" type="button" onClick={() => setPage("settings")}><Settings2 size={13} /> Workspace settings</button>
               </div>
             </div>
-            <div className="hero-art" aria-hidden="true"><div className="orbit orbit-a" /><div className="orbit orbit-b" /><div className="core"><Command size={34} /></div><div className="orbit-top">MATRIX / CORE</div><div className="orbit-bottom">AI WORKSPACE · 8.0</div></div>
+            <div className="hero-art" aria-hidden="true"><div className="orbit orbit-a" /><div className="orbit orbit-b" /><div className="core"><Command size={34} /></div><div className="orbit-top">MATRIX / CORE</div><div className="orbit-bottom">SYSTEM / ONLINE</div></div>
           </section>
           <div className="stats">
             <div className="stat"><Users /><span>YOUR AGENTS</span><strong>{agents.length.toString().padStart(2, "0")}</strong><p>Personal AI profiles</p></div>
