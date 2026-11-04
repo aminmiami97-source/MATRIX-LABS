@@ -510,7 +510,7 @@ export default function NetworkApp() {
     } finally { setAuthBusy(false); }
   }
 
-  async function signOut() { await db?.auth.signOut(); setPage("chat"); }
+  async function signOut() { await db?.auth.signOut(); setPage("home"); }
   async function continueAsGuest() {
     if (!db || authBusy) return;
     setAuthBusy(true); setAuthError("");
