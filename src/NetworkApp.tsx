@@ -208,9 +208,29 @@ export default function NetworkApp() {
       });
       setUpdateProgress(100);
       setUpdateProgressLabel("Installed. Restarting MATRIX LABS…");
-      await relaunch();
+      try {
+        await relaunch();
+      } catch (error) {
+        const detail = error instanceof Error
+          ? error.message
+          : typeof error === "string"
+            ? error
+            : error && typeof error === "object" && "message" in error
+              ? String((error as { message: unknown }).message)
+              : String(error);
+        setUpdateMessage("Update installed, but MATRIX LABS could not restart automatically: " + detail);
+        setUpdateProgressLabel("Update installed. Please close and reopen MATRIX LABS.");
+        setUpdateDownloading(false);
+      }
     } catch (error) {
-      setUpdateMessage(error instanceof Error ? error.message : "The update could not be installed. You can use the manual installer as a fallback.");
+      const detail = error instanceof Error
+        ? error.message
+        : typeof error === "string"
+          ? error
+          : error && typeof error === "object" && "message" in error
+            ? String((error as { message: unknown }).message)
+            : String(error);
+      setUpdateMessage("Update installation failed: " + detail);
       setUpdateProgressLabel("");
       setUpdateDownloading(false);
     }
