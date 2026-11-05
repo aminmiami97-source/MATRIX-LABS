@@ -31,8 +31,9 @@ The server uses stdio transport. It supports Studio discovery, DataModel hierarc
 - [ ] Add process exit detection, request timeouts, and app-shutdown cleanup.
 
 ### Phase 2 — Visual read-only workspace
-- [ ] Add a dedicated Roblox Studio navigation item and workspace page.
-- [ ] Show connection state, Studio instances, place IDs, and selected target.
+- [x] Add a dedicated Roblox Studio navigation item and initial connection workspace page.
+- [x] Show connection state, dynamically discovered MCP tools, and the Studio discovery response.
+- [ ] Parse Studio instances into selectable targets with place IDs and selected target.
 - [ ] Build Explorer tree from hierarchy search results.
 - [ ] Add instance property/attribute inspector.
 - [ ] Add script search and read-only Luau viewer.
@@ -93,4 +94,4 @@ The server uses stdio transport. It supports Studio discovery, DataModel hierarc
 
 ## Status
 
-Planning and architecture approved. Implementation begins with the native connection foundation, followed by the read-only visual workspace. No Roblox Studio connection is active until the implementation is merged and the user enables Studio's MCP server.
+The native connection foundation is merged. The initial Roblox Studio workspace UI is in review: it exposes connect/disconnect, connection status, dynamic tool discovery, and the raw Studio discovery response. Explorer, script viewing, inspection, Output, and screenshots remain follow-up read-only work. Script edits, Luau execution, asset insertion, and playtesting remain disabled. No Roblox Studio connection is active until the user installs the updated Windows app and enables Studio's MCP server.
