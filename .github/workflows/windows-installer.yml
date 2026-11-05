@@ -14,6 +14,9 @@ on:
       - 'tsconfig.json'
       - 'index.html'
       - '.github/workflows/windows-installer.yml'
+  pull_request:
+    paths:
+      - '.github/workflows/windows-installer.yml'
   workflow_dispatch:
     inputs:
       release_tag:
