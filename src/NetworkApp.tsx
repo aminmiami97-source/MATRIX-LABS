@@ -169,7 +169,9 @@ export default function NetworkApp() {
     setRobloxError("");
     try {
       const result = await invoke<RobloxConnection>("roblox_mcp_status");
-      setRobloxConnection(result);
+      setRobloxConnection(current => result.connected
+        ? { ...current, ...result, studios: current.studios, serverInfo: current.serverInfo, protocolVersion: current.protocolVersion }
+        : result);
     } catch (error) {
       setRobloxError(error instanceof Error ? error.message : String(error));
     } finally {
