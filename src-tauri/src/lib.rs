@@ -11,7 +11,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             roblox_mcp::roblox_mcp_connect,
             roblox_mcp::roblox_mcp_disconnect,
-            roblox_mcp::roblox_mcp_status
+            roblox_mcp::roblox_mcp_status,
+            roblox_mcp::roblox_mcp_read_tool
         ])
         .run(tauri::generate_context!())
         .expect("error while running MATRIX LABS");

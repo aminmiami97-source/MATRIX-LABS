@@ -159,3 +159,106 @@ pub fn roblox_mcp_status(state: State<'_, RobloxMcpState>) -> Result<Value, Stri
     }
     Ok(json!({"connected":true,"tools":session.tools}))
 }
+
+
+/// Read-only Studio tools exposed through a fixed allowlist. Mutating tools such as
+/// multi_edit, execute_luau, insert_asset, and start_stop_play are intentionally excluded.
+fn validate_read_only_arguments(tool_name: &str, arguments: Value, studio_id: &str) -> Result<Value, String> {
+    let mut args = arguments.as_object().cloned()
+        .ok_or_else(|| "Roblox Studio tool arguments must be a JSON object.".to_string())?;
+    let allowed: &[&str] = match tool_name {
+        "search_game_tree" => &["path", "instance_type", "keywords", "max_depth"],
+        "inspect_instance" => &["path"],
+        "script_search" => &["keywords"],
+        "script_grep" => &["query"],
+        "script_read" => &["target_file", "should_read_entire_file", "start_line_one_indexed", "end_line_one_indexed_inclusive"],
+        "get_console_output" | "screen_capture" => &[],
+        _ => return Err("This Roblox Studio tool is not available through the read-only bridge.".into()),
+    };
+
+    if let Some(key) = args.keys().find(|key| !allowed.contains(&key.as_str())) {
+        return Err(format!("Unsupported argument for {tool_name}: {key}"));
+    }
+
+    for key in ["path", "instance_type", "keywords", "query", "target_file"] {
+        if let Some(value) = args.get(key) {
+            let text = value.as_str().ok_or_else(|| format!("{key} must be text."))?;
+            if text.trim().is_empty() || text.len() > 512 {
+                return Err(format!("{key} must contain 1–512 characters."));
+            }
+        }
+    }
+
+    if let Some(depth) = args.get("max_depth") {
+        let depth = depth.as_u64().ok_or("max_depth must be an integer.")?;
+        if !(1..=10).contains(&depth) {
+            return Err("max_depth must be between 1 and 10.".into());
+        }
+    }
+
+    for key in ["start_line_one_indexed", "end_line_one_indexed_inclusive"] {
+        if let Some(line) = args.get(key) {
+            let line = line.as_u64().ok_or_else(|| format!("{key} must be a positive integer."))?;
+            if line == 0 || line > 100_000 {
+                return Err(format!("{key} must be between 1 and 100000."));
+            }
+        }
+    }
+
+    if let (Some(start), Some(end)) = (
+        args.get("start_line_one_indexed").and_then(Value::as_u64),
+        args.get("end_line_one_indexed_inclusive").and_then(Value::as_u64),
+    ) {
+        if end < start {
+            return Err("The ending line must be greater than or equal to the starting line.".into());
+        }
+    }
+
+    if let Some(read_entire) = args.get("should_read_entire_file") {
+        if !read_entire.is_boolean() {
+            return Err("should_read_entire_file must be true or false.".into());
+        }
+    }
+
+    if studio_id.trim().is_empty() || studio_id.len() > 256 {
+        return Err("Select a valid Roblox Studio instance before running a tool.".into());
+    }
+    args.insert("studio_id".into(), Value::String(studio_id.to_string()));
+    Ok(Value::Object(args))
+}
+
+#[tauri::command]
+pub fn roblox_mcp_read_tool(
+    state: State<'_, RobloxMcpState>,
+    tool_name: String,
+    studio_id: String,
+    arguments: Value,
+) -> Result<Value, String> {
+    const READ_ONLY_TOOLS: &[&str] = &[
+        "search_game_tree",
+        "inspect_instance",
+        "script_search",
+        "script_grep",
+        "script_read",
+        "get_console_output",
+        "screen_capture",
+    ];
+
+    if !READ_ONLY_TOOLS.contains(&tool_name.as_str()) {
+        return Err("Blocked: MATRIX LABS only exposes approved read-only Roblox Studio tools here.".into());
+    }
+
+    let safe_arguments = validate_read_only_arguments(&tool_name, arguments, &studio_id)?;
+    let mut guard = state.session.lock()
+        .map_err(|_| "Roblox connection state is unavailable.".to_string())?;
+    let session = guard.as_mut().ok_or("Connect to Roblox Studio first.")?;
+
+    if !session.tools.iter().any(|name| name == &tool_name) {
+        return Err(format!("The connected Studio server does not provide {tool_name}."));
+    }
+
+    request(session, "tools/call", json!({
+        "name": tool_name,
+        "arguments": safe_arguments
+    }))
+}
