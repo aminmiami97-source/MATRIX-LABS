@@ -170,11 +170,15 @@ pub fn roblox_mcp_status(state: State<'_, RobloxMcpState>) -> Result<Value, Stri
 pub fn roblox_mcp_script_edit_schema(state: State<'_, RobloxMcpState>) -> Result<Value, String> {
     let mut guard = state.session.lock()
         .map_err(|_| "Roblox connection state is unavailable.".to_string())?;
-    let session = guard.as_mut().ok_or("Connect to Roblox Studio first.")?;
-    if let Some(status) = session.child.try_wait().map_err(|e| e.to_string())? {
+    let exit_status = match guard.as_mut() {
+        Some(session) => session.child.try_wait().map_err(|e| e.to_string())?,
+        None => return Err("Connect to Roblox Studio first.".into()),
+    };
+    if let Some(status) = exit_status {
         *guard = None;
         return Err(format!("Roblox Studio MCP has exited: {status}"));
     }
+    let session = guard.as_ref().ok_or("Connect to Roblox Studio first.")?;
     let schema = session.tool_schemas.iter()
         .find(|tool| tool.get("name").and_then(Value::as_str) == Some("multi_edit"))
         .cloned()
