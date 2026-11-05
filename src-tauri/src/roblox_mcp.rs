@@ -16,6 +16,13 @@ struct McpSession {
     tools: Vec<String>,
 }
 
+impl Drop for McpSession {
+    fn drop(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+
 #[derive(Default)]
 pub struct RobloxMcpState {
     session: Mutex<Option<McpSession>>,
@@ -69,8 +76,10 @@ pub fn roblox_mcp_connect(state: State<'_, RobloxMcpState>) -> Result<Value, Str
             return Err("Roblox Studio MCP launcher was not found. Update Roblox Studio, then enable Assistant → Manage MCP Servers → Enable Studio as MCP server.".into());
         }
 
+        let launcher_command = format!("\"{}\"", launcher.display());
         let mut child = Command::new("cmd.exe")
-            .args(["/D", "/S", "/C", "call "%LOCALAPPDATA%\\Roblox\\mcp.bat""])
+            .args(["/D", "/S", "/C"])
+            .arg(launcher_command)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -84,7 +93,9 @@ pub fn roblox_mcp_connect(state: State<'_, RobloxMcpState>) -> Result<Value, Str
         thread::spawn(move || {
             for line in BufReader::new(stdout).lines() {
                 match line {
-                    Ok(line) if !line.trim().is_empty() => { if tx.send(line).is_err() { break; } }
+                    Ok(line) if !line.trim().is_empty() => {
+                        if tx.send(line).is_err() { break; }
+                    }
                     Ok(_) => {}
                     Err(_) => break,
                 }
