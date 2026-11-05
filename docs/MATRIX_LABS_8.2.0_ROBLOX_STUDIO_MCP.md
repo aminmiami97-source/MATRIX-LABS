@@ -42,6 +42,17 @@ The server uses stdio transport. It supports Studio discovery, DataModel hierarc
 - [ ] Add loading, empty, disconnected, and error states.
 
 ### Phase 3 — Controlled editing
+
+#### 8.4.0 planner foundation
+- [x] Add a typed script-replacement draft operation with an explicit target.
+- [x] Add a local before/after diff preview.
+- [x] Keep preview creation local-only; no MCP mutation call is exposed.
+- [ ] Connect AGOORA planning to typed operations and live Studio context.
+- [ ] Re-read the live script before approval and reject stale previews.
+- [ ] Validate operations against the live MCP schema.
+- [ ] Bind approval to a one-time plan hash and selected Studio instance.
+- [ ] Apply only approved batches and record snapshots/results.
+
 - [ ] Add an AI task planner that turns a request into a typed list of proposed Studio operations.
 - [ ] Add editable Luau view with syntax-aware presentation.
 - [ ] Read the current script immediately before preparing a write; reject stale previews if the source changed.
