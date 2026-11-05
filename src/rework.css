@@ -576,3 +576,16 @@ nav { gap:5px; }
   .roblox-read-actions .button { justify-content:center; padding:0 7px; }
   .roblox-read-result pre { max-height:320px; }
 }
+
+/* Roblox Studio 8.4.0 edit planner */
+.roblox-planner{margin-top:18px;padding:22px}.roblox-planner-intro{color:var(--muted,#9694a8);font-size:13px;line-height:1.6;margin:-5px 0 18px}
+.roblox-plan-fields>label,.roblox-plan-columns label{display:block;color:var(--muted,#9995aa);font-size:10px;font-weight:700;letter-spacing:.12em;margin:12px 0 8px}
+.roblox-plan-fields input,.roblox-plan-columns textarea{width:100%;box-sizing:border-box;color:var(--text,#f5f3ff);background:rgba(5,5,12,.72);border:1px solid rgba(157,104,255,.24);border-radius:10px;padding:11px 12px;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;outline:none}
+.roblox-plan-fields input:focus,.roblox-plan-columns textarea:focus{border-color:#9d63ff;box-shadow:0 0 0 2px rgba(157,99,255,.12)}
+.roblox-plan-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:10px}.roblox-plan-columns textarea{min-height:190px;resize:vertical}
+.roblox-plan-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px}.roblox-plan-actions>span{color:var(--muted,#9995aa);font-size:11px}
+.roblox-plan-preview{margin-top:20px;border:1px solid rgba(157,104,255,.28);background:rgba(12,9,24,.62);border-radius:12px;padding:15px}.roblox-plan-target{color:#c8a8ff;font:12px ui-monospace,SFMono-Regular,Consolas,monospace;margin:10px 0 12px;overflow-wrap:anywhere}
+.roblox-diff{border:1px solid rgba(255,255,255,.08);border-radius:9px;overflow:auto;max-height:380px;background:#08080e}.roblox-diff-line{display:flex;gap:10px;min-height:22px;padding:2px 10px;white-space:pre}
+.roblox-diff-line>span{width:12px;flex:0 0 12px;color:#777;text-align:center}.roblox-diff-line code{color:#d8d4e5;font:11px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace}
+.roblox-diff-line.add{background:rgba(46,160,95,.13)}.roblox-diff-line.add>span,.roblox-diff-line.add code{color:#86e2a8}.roblox-diff-line.remove{background:rgba(232,74,93,.13)}.roblox-diff-line.remove>span,.roblox-diff-line.remove code{color:#ff9aa7}
+@media(max-width:850px){.roblox-plan-columns{grid-template-columns:1fr}}
