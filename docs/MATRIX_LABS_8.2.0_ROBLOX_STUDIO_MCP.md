@@ -33,19 +33,25 @@ The server uses stdio transport. It supports Studio discovery, DataModel hierarc
 ### Phase 2 — Visual read-only workspace
 - [x] Add a dedicated Roblox Studio navigation item and initial connection workspace page.
 - [x] Show connection state, dynamically discovered MCP tools, and the Studio discovery response.
-- [ ] Parse Studio instances into selectable targets with place IDs and selected target.
-- [ ] Build Explorer tree from hierarchy search results.
-- [ ] Add instance property/attribute inspector.
-- [ ] Add script search and read-only Luau viewer.
-- [ ] Add Output viewer and screenshot panel.
+- [x] Parse Studio instances into selectable targets with place IDs and selected target (with a manual Studio ID fallback).
+- [x] Add a bounded-depth Explorer hierarchy query.
+- [x] Add read-only instance property/attribute inspection.
+- [x] Add script name search, content search, and read-only Luau viewer.
+- [x] Add Output viewer and viewport screenshot panel.
+- [x] Enforce a Rust-side allowlist and validate tool arguments before forwarding requests.
 - [ ] Add loading, empty, disconnected, and error states.
 
 ### Phase 3 — Controlled editing
+- [ ] Add an AI task planner that turns a request into a typed list of proposed Studio operations.
 - [ ] Add editable Luau view with syntax-aware presentation.
-- [ ] Generate a diff before applying any script edit.
-- [ ] Require explicit confirmation for each write.
+- [ ] Read the current script immediately before preparing a write; reject stale previews if the source changed.
+- [ ] Generate exact before/after diffs for every script edit.
+- [ ] Validate each target path, script class, edit operation, and payload against the live MCP tool schema.
+- [ ] Require one explicit user confirmation for the complete displayed batch; no hidden follow-up writes.
+- [ ] Bind approval to a one-time plan ID and content hash so edits cannot be changed after approval.
 - [ ] Record target, before/after content, timestamp, and result in local activity history.
 - [ ] Add safe recovery/undo where Roblox MCP supports it; otherwise preserve a local backup and explain limits.
+- [ ] Keep multi_edit isolated from execute_luau, asset insertion, and playtest permissions.
 
 ### Phase 4 — AGOORA orchestration
 - [ ] Convert user requests into typed action plans.
@@ -94,4 +100,4 @@ The server uses stdio transport. It supports Studio discovery, DataModel hierarc
 
 ## Status
 
-The native connection foundation is merged. The initial Roblox Studio workspace UI is in review: it exposes connect/disconnect, connection status, dynamic tool discovery, and the raw Studio discovery response. Explorer, script viewing, inspection, Output, and screenshots remain follow-up read-only work. Script edits, Luau execution, asset insertion, and playtesting remain disabled. No Roblox Studio connection is active until the user installs the updated Windows app and enables Studio's MCP server.
+The native connection foundation and initial workspace are merged. The next read-only workspace pass adds a target Studio selector, Explorer hierarchy queries, script search/read, instance inspection, Output retrieval, and viewport capture through a fixed Rust-side allowlist. The next editing milestone is a typed AI plan + exact diff + one-time approval token + audit/recovery record. Script writes, Luau execution, asset insertion, and playtesting remain disabled until their separate permission gates are implemented. No Roblox Studio connection is active until the user installs an updated Windows app and enables Studio's MCP server.
