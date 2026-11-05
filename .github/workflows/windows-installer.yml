@@ -16,7 +16,8 @@ on:
       - '.github/workflows/windows-installer.yml'
   pull_request:
     paths:
-      - 'src/**'
+      # Frontend-only changes are validated by frontend-build.yml.
+      # Build the Windows installer for native/Tauri or installer-pipeline changes.
       - 'src-tauri/**'
       - 'package.json'
       - 'vite.config.ts'
