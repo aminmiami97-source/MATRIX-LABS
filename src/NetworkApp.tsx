@@ -986,7 +986,7 @@ export default function NetworkApp() {
             </div>
             {robloxReadBusy && <div className="roblox-read-status"><span className="roblox-live-dot" /> Requesting read-only data from Studio…</div>}
             {robloxSchemaError && <div className="provider-alert error-alert roblox-error" role="alert">{robloxSchemaError}</div>}
-            {robloxEditSchema && <section className="roblox-read-result">
+            {robloxEditSchema !== null && <section className="roblox-read-result">
               <div className="roblox-read-result-head"><strong>multi_edit capability schema</strong><span>INSPECTION ONLY</span></div>
               <pre>{formatRobloxResult(robloxEditSchema)}</pre>
               <div className="roblox-read-empty">This only reads the installed Studio tool definition. It does not edit scripts or enable write access.</div>
