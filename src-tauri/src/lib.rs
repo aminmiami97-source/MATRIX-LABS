@@ -12,7 +12,8 @@ pub fn run() {
             roblox_mcp::roblox_mcp_connect,
             roblox_mcp::roblox_mcp_disconnect,
             roblox_mcp::roblox_mcp_status,
-            roblox_mcp::roblox_mcp_read_tool
+            roblox_mcp::roblox_mcp_read_tool,
+            roblox_mcp::roblox_mcp_script_edit_schema
         ])
         .run(tauri::generate_context!())
         .expect("error while running MATRIX LABS");
