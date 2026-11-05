@@ -18,9 +18,10 @@
 - [ ] Verify all dashboard actions navigate to the intended screens.
 
 ### 2. AGOORA and chat experience
-- [ ] Review the chat experience and identify functional defects.
-- [ ] Improve conversation navigation and loading/error feedback.
-- [ ] Preserve existing model routing and credit/quota rules.
+- [x] Review the chat experience and identify functional defects.
+- [ ] Improve conversation navigation.
+- [x] Improve failed-send feedback: announce errors accessibly, remove failed optimistic messages, and restore the user's draft and attachments for retry.
+- [x] Preserve existing model routing and server-side credit/quota rules.
 
 ### 3. Guest and account experience
 - [ ] Audit guest onboarding, quota messaging, and account conversion.
@@ -47,4 +48,4 @@
 
 ## Versioning rule
 
-The development branch remains on the current stable version until the release candidate is ready. The application/package/Tauri version markers and updater manifest must be aligned to 8.1.0 together during release preparation. Do not publish a release until the installer, signature, and latest.json are verified.
+The application/package/Tauri version markers are currently aligned to 8.1.0. Before publication, verify that the updater manifest, installer filename, signature, and latest.json all reference the same 8.1.0 release. Do not publish until the installer, signature, and manifest are verified.
