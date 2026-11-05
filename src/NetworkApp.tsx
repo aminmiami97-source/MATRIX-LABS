@@ -4,7 +4,8 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
-import { Activity, ArrowRight, ArrowUpRight, ChevronRight, Coins, Command, Copy, FileText, FolderOpen, Home, LockKeyhole, LogOut, Mail, MessageCircle, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, RefreshCw, Send, Settings2, ShieldCheck, Sparkles, Users, X } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
+import { Activity, ArrowRight, ArrowUpRight, Boxes, Cable, Camera, ChevronRight, Code2, Coins, Command, Copy, FileText, FolderOpen, FolderTree, Gamepad2, Home, LockKeyhole, LogOut, Mail, MessageCircle, Monitor, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, RefreshCw, Send, Settings2, ShieldCheck, Sparkles, Terminal, Users, X } from "lucide-react";
 
 const URL = import.meta.env.VITE_SUPABASE_URL?.trim() ?? "";
 const PUBLIC_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? "";
@@ -21,6 +22,7 @@ const navItems = [
   { id: "home", label: "Overview", icon: Home },
   { id: "chat", label: "Chat", icon: MessageCircle },
   { id: "agents", label: "Workspace", icon: Users },
+  { id: "roblox", label: "Roblox Studio", icon: Gamepad2 },
   { id: "plugins", label: "Plugins", icon: Mail },
   { id: "permissions", label: "Permissions", icon: ShieldCheck },
   { id: "settings", label: "Settings", icon: Settings2 }
@@ -30,7 +32,8 @@ type Agent = { id: string; name: string; purpose: string; personality: string };
 type EmailDraft = { to: string; subject: string; body: string };
 type Attachment = { id: string; file: File; extractedText: string };
 type Message = { id: string; role: "user" | "assistant"; content: string; emailDraft?: EmailDraft };
-type Page = "home" | "chat" | "agents" | "settings" | "plugins" | "permissions" | "credits";
+type Page = "home" | "chat" | "agents" | "roblox" | "settings" | "plugins" | "permissions" | "credits";
+type RobloxConnection = { connected: boolean; tools?: string[]; studios?: unknown; serverInfo?: { name?: string; version?: string }; protocolVersion?: string; exitStatus?: string };
 
 function localKey(uid: string, part: string) { return "matrix." + uid + "." + part; }
 function read<T>(key: string, fallback: T): T {
@@ -120,6 +123,9 @@ export default function NetworkApp() {
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
 
   const [page, setPage] = useState<Page>("home");
+  const [robloxConnection, setRobloxConnection] = useState<RobloxConnection>({ connected: false, tools: [] });
+  const [robloxBusy, setRobloxBusy] = useState(false);
+  const [robloxError, setRobloxError] = useState("");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => read("matrix.ui.sidebarCollapsed", false));
   const [agentPanelCollapsed, setAgentPanelCollapsed] = useState(() => read("matrix.ui.agentPanelCollapsed", false));
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -157,6 +163,49 @@ export default function NetworkApp() {
   const [updateDownloading, setUpdateDownloading] = useState(false);
   const [updateProgress, setUpdateProgress] = useState(0);
   const [updateProgressLabel, setUpdateProgressLabel] = useState("");
+
+  async function refreshRobloxStatus() {
+    setRobloxBusy(true);
+    setRobloxError("");
+    try {
+      const result = await invoke<RobloxConnection>("roblox_mcp_status");
+      setRobloxConnection(result);
+    } catch (error) {
+      setRobloxError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setRobloxBusy(false);
+    }
+  }
+
+  async function connectRobloxStudio() {
+    setRobloxBusy(true);
+    setRobloxError("");
+    try {
+      const result = await invoke<RobloxConnection>("roblox_mcp_connect");
+      setRobloxConnection(result);
+    } catch (error) {
+      setRobloxError(error instanceof Error ? error.message : String(error));
+      try {
+        const status = await invoke<RobloxConnection>("roblox_mcp_status");
+        setRobloxConnection(status);
+      } catch { /* Keep the original connection error visible. */ }
+    } finally {
+      setRobloxBusy(false);
+    }
+  }
+
+  async function disconnectRobloxStudio() {
+    setRobloxBusy(true);
+    setRobloxError("");
+    try {
+      await invoke("roblox_mcp_disconnect");
+      setRobloxConnection({ connected: false, tools: [] });
+    } catch (error) {
+      setRobloxError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setRobloxBusy(false);
+    }
+  }
 
   async function checkForUpdates(silent = false) {
     if (updateChecking || updateDownloading) return;
@@ -767,6 +816,51 @@ export default function NetworkApp() {
       <header className="topbar"><div className="topbar-leading"><button className="icon-button topbar-sidebar-toggle" type="button" onClick={() => setSidebarCollapsed(value => !value)} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}>{sidebarCollapsed ? <PanelLeftOpen size={13} /> : <PanelLeftClose size={13} />}</button><div className="breadcrumbs"><span>Workspace</span><ChevronRight size={11} /><strong>{page === "home" ? "Overview" : page === "chat" ? activeAgent?.name ?? "Chat" : page === "credits" ? "MATRIX Credits" : page[0].toUpperCase() + page.slice(1)}</strong></div></div><div className="topbar-actions">{page === "chat" && <button className="icon-button" type="button" onClick={() => setAgentPanelCollapsed(value => !value)} title={agentPanelCollapsed ? "Show agent details" : "Hide agent details"} aria-label={agentPanelCollapsed ? "Show agent details" : "Hide agent details"}>{agentPanelCollapsed ? <PanelRightOpen size={12} /> : <PanelRightClose size={12} />}</button>}<div className="local-mode"><i /> {session.user.is_anonymous ? "GUEST MODE" : "ACCOUNT CONNECTED"}</div>{session.user.is_anonymous ? <div className="top-credits"><Users size={12} /><strong>{guestRemaining}/10</strong><span>LEFT</span></div> : <button className="top-credits" onClick={() => setPage("credits")}><Coins size={12} /><strong>{credits ?? "—"}</strong><span>CRD</span></button>}</div></header>
       {updateInfo && !updateDismissed && <div className="update-banner" role="status"><div className="update-banner-icon"><RefreshCw size={15} /></div><div className="update-banner-copy"><strong>MATRIX LABS v{updateInfo.version} is available</strong><span>Verified in-app update ready to install.</span></div><button className="button primary update-download" type="button" onClick={() => void installUpdate()} disabled={updateDownloading}>{updateDownloading ? "Installing…" : "Update now"} <ArrowUpRight size={12} /></button><button className="update-dismiss" type="button" onClick={() => setUpdateDismissed(true)} aria-label="Dismiss update notification"><X size={14} /></button></div>}
       <div className={page === "chat" ? "page-content chat-content" : "page-content"}>
+        {page === "roblox" && <>
+          {title("Roblox Studio.", "Connect MATRIX LABS to the official Roblox Studio MCP server on this Windows device.")}
+          <section className="roblox-connect panel">
+            <div className="roblox-connect-mark"><Gamepad2 size={23} /></div>
+            <div className="roblox-connect-copy">
+              <div className="eyebrow">LOCAL STUDIO CONNECTION</div>
+              <h2>{robloxConnection.connected ? "Studio bridge connected" : "Your Studio workspace is not connected"}</h2>
+              <p>{robloxConnection.connected ? "MATRIX LABS has started the local MCP bridge and discovered the tools exposed by your Studio installation." : "Open Roblox Studio, enable “Studio as MCP server” in Assistant → Manage MCP Servers, then connect here."}</p>
+              <div className="roblox-connection-meta"><span className={robloxConnection.connected ? "roblox-state online" : "roblox-state"}><i />{robloxConnection.connected ? "CONNECTED" : "DISCONNECTED"}</span><span>WINDOWS · LOCAL STDIO</span></div>
+            </div>
+            <div className="roblox-connect-actions">
+              {!robloxConnection.connected
+                ? <button className="button primary" type="button" onClick={() => void connectRobloxStudio()} disabled={robloxBusy}><Cable size={13} />{robloxBusy ? "Connecting…" : "Connect Studio"}</button>
+                : <button className="button secondary" type="button" onClick={() => void disconnectRobloxStudio()} disabled={robloxBusy}>{robloxBusy ? "Disconnecting…" : "Disconnect"}</button>}
+              <button className="button quiet" type="button" onClick={() => void refreshRobloxStatus()} disabled={robloxBusy}><RefreshCw size={12} className={robloxBusy ? "spin" : ""} /> Refresh</button>
+            </div>
+          </section>
+          {robloxError && <div className="provider-alert error-alert roblox-error" role="alert">{robloxError}</div>}
+          <div className="roblox-workspace-grid">
+            <section className="panel roblox-panel roblox-studios">
+              <div className="panel-head"><div><div className="eyebrow">DISCOVERY</div><h3>Studio instances</h3></div><Monitor size={16} /></div>
+              {robloxConnection.connected
+                ? <div className="roblox-discovery-result"><div className="roblox-discovery-status"><span className="roblox-live-dot" />Discovery request completed</div><pre>{JSON.stringify(robloxConnection.studios ?? { message: "No discovery payload was returned." }, null, 2)}</pre></div>
+                : <div className="roblox-empty"><Monitor size={22} /><strong>No Studio session selected</strong><span>Connect to discover the Roblox Studio windows currently available to the local MCP server.</span></div>}
+            </section>
+            <section className="panel roblox-panel roblox-tools">
+              <div className="panel-head"><div><div className="eyebrow">SERVER CAPABILITIES</div><h3>Discovered MCP tools</h3></div><Boxes size={16} /></div>
+              {robloxConnection.connected && (robloxConnection.tools?.length ?? 0) > 0
+                ? <div className="roblox-tool-list">{robloxConnection.tools!.map(tool => <div className="roblox-tool-row" key={tool}><Code2 size={12} /><code>{tool}</code><span>AVAILABLE</span></div>)}</div>
+                : <div className="roblox-empty"><Cable size={22} /><strong>Waiting for connection</strong><span>The tool list is discovered from your installed Studio version. No tool names are assumed in advance.</span></div>}
+              {robloxConnection.serverInfo && <div className="roblox-server-info">SERVER {robloxConnection.serverInfo.name ?? "Roblox Studio"} {robloxConnection.serverInfo.version ?? ""} · MCP {robloxConnection.protocolVersion ?? "—"}</div>}
+            </section>
+          </div>
+          <section className="panel roblox-modules">
+            <div className="panel-head"><div><div className="eyebrow">READ-ONLY WORKSPACE</div><h3>Studio tools</h3></div><ShieldCheck size={16} /></div>
+            <div className="roblox-module-grid">
+              <article><FolderTree size={18} /><strong>Explorer</strong><span>Hierarchy browsing will use the server's read-only game-tree tools.</span><small>COMING IN NEXT READ-ONLY PASS</small></article>
+              <article><Code2 size={18} /><strong>Script viewer</strong><span>Read and search Luau scripts. Editing is not enabled.</span><small>COMING IN NEXT READ-ONLY PASS</small></article>
+              <article><Boxes size={18} /><strong>Instance inspector</strong><span>Inspect selected object properties and attributes without changing them.</span><small>COMING IN NEXT READ-ONLY PASS</small></article>
+              <article><Terminal size={18} /><strong>Output</strong><span>Review Studio diagnostics and messages from a connected session.</span><small>COMING IN NEXT READ-ONLY PASS</small></article>
+              <article><Camera size={18} /><strong>Viewport capture</strong><span>Request a Studio screenshot when the server exposes that capability.</span><small>COMING IN NEXT READ-ONLY PASS</small></article>
+            </div>
+          </section>
+          <div className="notice"><ShieldCheck size={13} /><span><strong>Protected by default.</strong> This release only connects and discovers capabilities. It does not edit scripts, execute Luau, insert assets, start playtests, or run arbitrary Windows commands.</span></div>
+        </>}
         {page === "home" && <>
           {title("Your command center.", "Your MATRIX workspace, conversations, and tools at a glance.", createButton)}
           <section className="hero dashboard-hero">
