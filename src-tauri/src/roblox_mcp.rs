@@ -14,6 +14,7 @@ struct McpSession {
     responses: mpsc::Receiver<String>,
     next_id: u64,
     tools: Vec<String>,
+    tool_schemas: Vec<Value>,
 }
 
 impl Drop for McpSession {
@@ -115,8 +116,10 @@ pub fn roblox_mcp_connect(state: State<'_, RobloxMcpState>) -> Result<Value, Str
         }))?;
         send_message(&mut session, json!({"jsonrpc":"2.0","method":"notifications/initialized"}))?;
         let tool_result = request(&mut session, "tools/list", json!({}))?;
-        session.tools = tool_result.get("tools").and_then(Value::as_array).into_iter().flatten()
+        let tool_definitions = tool_result.get("tools").and_then(Value::as_array).cloned().unwrap_or_default();
+        session.tools = tool_definitions.iter()
             .filter_map(|tool| tool.get("name").and_then(Value::as_str).map(str::to_owned)).collect();
+        session.tool_schemas = tool_definitions;
 
         let studios = if session.tools.iter().any(|name| name == "list_roblox_studios") {
             request(&mut session, "tools/call", json!({"name":"list_roblox_studios","arguments":{}}))
@@ -160,6 +163,24 @@ pub fn roblox_mcp_status(state: State<'_, RobloxMcpState>) -> Result<Value, Stri
     Ok(json!({"connected":true,"tools":session.tools}))
 }
 
+/// Return the live schema for the official script-edit tool without invoking it.
+/// This keeps MATRIX LABS aligned with the installed Roblox Studio version while
+/// leaving all mutation capabilities blocked until the approval pipeline is ready.
+#[tauri::command]
+pub fn roblox_mcp_script_edit_schema(state: State<'_, RobloxMcpState>) -> Result<Value, String> {
+    let mut guard = state.session.lock()
+        .map_err(|_| "Roblox connection state is unavailable.".to_string())?;
+    let session = guard.as_mut().ok_or("Connect to Roblox Studio first.")?;
+    if let Some(status) = session.child.try_wait().map_err(|e| e.to_string())? {
+        *guard = None;
+        return Err(format!("Roblox Studio MCP has exited: {status}"));
+    }
+    let schema = session.tool_schemas.iter()
+        .find(|tool| tool.get("name").and_then(Value::as_str) == Some("multi_edit"))
+        .cloned()
+        .ok_or("The connected Studio version does not expose the multi_edit script-edit tool.")?;
+    Ok(schema)
+}
 
 /// Read-only Studio tools exposed through a fixed allowlist. Mutating tools such as
 /// multi_edit, execute_luau, insert_asset, and start_stop_play are intentionally excluded.
