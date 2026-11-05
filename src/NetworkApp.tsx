@@ -9,7 +9,7 @@ import { Activity, ArrowRight, ArrowUpRight, Boxes, Cable, Camera, ChevronRight,
 
 const URL = import.meta.env.VITE_SUPABASE_URL?.trim() ?? "";
 const PUBLIC_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? "";
-const APP_VERSION = "8.1.0";
+const APP_VERSION = "8.4.0";
 
 const db = URL && PUBLIC_KEY ? createClient(URL, PUBLIC_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } }) : null;
 
@@ -179,6 +179,12 @@ export default function NetworkApp() {
   const [robloxEditSchema, setRobloxEditSchema] = useState<unknown>(null);
   const [robloxSchemaBusy, setRobloxSchemaBusy] = useState(false);
   const [robloxSchemaError, setRobloxSchemaError] = useState("");
+  const [robloxPlanTask, setRobloxPlanTask] = useState("");
+  const [robloxPlanTarget, setRobloxPlanTarget] = useState("");
+  const [robloxPlanBefore, setRobloxPlanBefore] = useState("");
+  const [robloxPlanAfter, setRobloxPlanAfter] = useState("");
+  const [robloxPlanPreview, setRobloxPlanPreview] = useState<{ id: string; task: string; target: string; before: string; after: string; createdAt: string } | null>(null);
+  const [robloxPlanError, setRobloxPlanError] = useState("");
 
   useEffect(() => {
     const studios = findRobloxStudios(robloxConnection.studios);
@@ -314,6 +320,36 @@ export default function NetworkApp() {
     } finally {
       setRobloxSchemaBusy(false);
     }
+  }
+
+
+  function buildRobloxEditPreview() {
+    setRobloxPlanError("");
+    if (!robloxConnection.connected || !robloxStudioId.trim()) {
+      setRobloxPlanError("Connect to Studio and select a target instance before preparing an edit.");
+      return;
+    }
+    if (!robloxPlanTask.trim() || !robloxPlanTarget.trim() || !robloxPlanAfter.trim()) {
+      setRobloxPlanError("Add the requested change, exact script path, and proposed script content.");
+      return;
+    }
+    if (robloxPlanTask.length > 1200 || robloxPlanTarget.length > 512 || robloxPlanBefore.length > 100000 || robloxPlanAfter.length > 100000) {
+      setRobloxPlanError("The request, target, or script content exceeds the preview size limit.");
+      return;
+    }
+    setRobloxPlanPreview({
+      id: crypto.randomUUID(),
+      task: robloxPlanTask.trim(),
+      target: robloxPlanTarget.trim(),
+      before: robloxPlanBefore,
+      after: robloxPlanAfter,
+      createdAt: new Date().toISOString()
+    });
+  }
+
+  function clearRobloxEditPreview() {
+    setRobloxPlanPreview(null);
+    setRobloxPlanError("");
   }
 
   async function checkForUpdates(silent = false) {
@@ -999,6 +1035,35 @@ export default function NetworkApp() {
             </section>}
             {!robloxReadResult && !robloxReadBusy && <div className="roblox-read-empty"><FolderTree size={19} /><span>Choose a Studio instance, then explore the hierarchy, inspect objects, search scripts or read Studio Output.</span></div>}
           </section>
+
+          <section className="panel roblox-modules roblox-plan-builder">
+            <div className="panel-head"><div><div className="eyebrow">8.4.0 · EDIT PLANNER</div><h3>Prepare a script change</h3></div><Sparkles size={16} /></div>
+            <p className="roblox-plan-intro">Build a reviewable, typed script-edit draft. Paste the current script and AGOORA's proposed replacement; MATRIX LABS will show the exact line changes before any write is enabled.</p>
+            <label htmlFor="roblox-plan-task">WHAT SHOULD AGOORA CHANGE?</label>
+            <textarea id="roblox-plan-task" className="field roblox-plan-textarea" value={robloxPlanTask} onChange={event => setRobloxPlanTask(event.target.value)} placeholder="Example: Fix the round transition so players teleport to the arena when the intermission ends." maxLength={1200} rows={2} />
+            <label htmlFor="roblox-plan-target">EXACT SCRIPT PATH</label>
+            <input id="roblox-plan-target" className="field" value={robloxPlanTarget} onChange={event => setRobloxPlanTarget(event.target.value)} placeholder="game.ServerScriptService.RoundManager" maxLength={512} />
+            <div className="roblox-plan-columns">
+              <div><label htmlFor="roblox-plan-before">CURRENT SCRIPT (BEFORE)</label><textarea id="roblox-plan-before" className="field roblox-plan-code" value={robloxPlanBefore} onChange={event => setRobloxPlanBefore(event.target.value)} placeholder="Paste the current script content here…" rows={10} spellCheck={false} /></div>
+              <div><label htmlFor="roblox-plan-after">PROPOSED SCRIPT (AFTER)</label><textarea id="roblox-plan-after" className="field roblox-plan-code" value={robloxPlanAfter} onChange={event => setRobloxPlanAfter(event.target.value)} placeholder="Paste AGOORA's proposed full script here…" rows={10} spellCheck={false} /></div>
+            </div>
+            <div className="roblox-read-actions">
+              <button className="button primary" type="button" onClick={buildRobloxEditPreview} disabled={!robloxConnection.connected || !robloxStudioId.trim()}> <Code2 size={12} /> Build exact diff preview</button>
+              <button className="button quiet" type="button" onClick={clearRobloxEditPreview}>Clear preview</button>
+            </div>
+            {robloxPlanError && <div className="provider-alert error-alert roblox-error" role="alert">{robloxPlanError}</div>}
+            {robloxPlanPreview && <div className="roblox-plan-preview">
+              <div className="roblox-read-result-head"><strong>Review draft · {robloxPlanPreview.target}</strong><span>PREVIEW ONLY</span></div>
+              <p>{robloxPlanPreview.task}</p>
+              <div className="roblox-plan-meta">PLAN {robloxPlanPreview.id} · {new Date(robloxPlanPreview.createdAt).toLocaleString()}</div>
+              <div className="roblox-plan-columns">
+                <div><label>BEFORE SNAPSHOT</label><pre>{robloxPlanPreview.before || "(empty script)"}</pre></div>
+                <div><label>PROPOSED AFTER</label><pre>{robloxPlanPreview.after}</pre></div>
+              </div>
+              <div className="notice muted-notice"><ShieldCheck size={13} /><span>This draft is not applied. The next safety layer will re-read the live script, reject stale previews, validate the live MCP schema, and bind one-time approval to this plan's content hash. All write tools remain blocked.</span></div>
+            </div>}
+          </section>
+
           <section className="panel roblox-modules">
             <div className="panel-head"><div><div className="eyebrow">NEXT EDITING LAYER</div><h3>AI editing pipeline</h3></div><Sparkles size={16} /></div>
             <div className="roblox-module-grid">
