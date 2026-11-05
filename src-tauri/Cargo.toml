@@ -1,6 +1,6 @@
 [package]
 name = "matrix-labs"
-version = "8.0.2"
+version = "8.4.0"
 description = "Personal AI agents for Windows, designed around user control."
 authors = ["MATRIX LABS"]
 edition = "2021"

@@ -42,6 +42,17 @@ The server uses stdio transport. It supports Studio discovery, DataModel hierarc
 - [ ] Add loading, empty, disconnected, and error states.
 
 ### Phase 3 — Controlled editing
+
+#### 8.4.0 planner foundation
+- [x] Add a typed script-replacement draft operation with an explicit target.
+- [x] Add a local before/after diff preview.
+- [x] Keep preview creation local-only; no MCP mutation call is exposed.
+- [ ] Connect AGOORA planning to typed operations and live Studio context.
+- [ ] Re-read the live script before approval and reject stale previews.
+- [ ] Validate operations against the live MCP schema.
+- [ ] Bind approval to a one-time plan hash and selected Studio instance.
+- [ ] Apply only approved batches and record snapshots/results.
+
 - [ ] Add an AI task planner that turns a request into a typed list of proposed Studio operations.
 - [ ] Add editable Luau view with syntax-aware presentation.
 - [ ] Read the current script immediately before preparing a write; reject stale previews if the source changed.
@@ -101,3 +112,15 @@ The server uses stdio transport. It supports Studio discovery, DataModel hierarc
 ## Status
 
 The native connection foundation and initial workspace are merged. The next read-only workspace pass adds a target Studio selector, Explorer hierarchy queries, script search/read, instance inspection, Output retrieval, and viewport capture through a fixed Rust-side allowlist. The next editing milestone is a typed AI plan + exact diff + one-time approval token + audit/recovery record. Script writes, Luau execution, asset insertion, and playtesting remain disabled until their separate permission gates are implemented. No Roblox Studio connection is active until the user installs an updated Windows app and enables Studio's MCP server.
+
+
+## MATRIX LABS 8.4.0 — Edit planner preview
+
+- [x] Add a draft editor for one script replacement with a user request, exact target path, before snapshot, and proposed after content.
+- [x] Generate a unique preview ID and timestamp for each draft.
+- [x] Display the before and proposed-after snapshots side by side.
+- [ ] Next: capture live before-state directly from `script_read`, compute a compact line diff, and reject stale source snapshots.
+- [ ] Next: validate operation fields against the live `multi_edit` schema and calculate a canonical content hash.
+- [ ] Next: implement one-time approval tokens, local audit history, and recovery snapshots before enabling any mutation call.
+
+This first planner UI is deliberately a preview workspace, not an AI writer or an edit executor. Users can paste AGOORA's proposed script and inspect it; no Roblox write tool is invoked by this screen. The existing Rust read-only allowlist remains the security boundary.
