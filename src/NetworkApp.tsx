@@ -176,6 +176,9 @@ export default function NetworkApp() {
   const [robloxReadBusy, setRobloxReadBusy] = useState(false);
   const [robloxReadError, setRobloxReadError] = useState("");
   const [robloxReadResult, setRobloxReadResult] = useState<RobloxReadResult | null>(null);
+  const [robloxEditSchema, setRobloxEditSchema] = useState<unknown>(null);
+  const [robloxSchemaBusy, setRobloxSchemaBusy] = useState(false);
+  const [robloxSchemaError, setRobloxSchemaError] = useState("");
 
   useEffect(() => {
     const studios = findRobloxStudios(robloxConnection.studios);
@@ -292,6 +295,24 @@ export default function NetworkApp() {
       setRobloxReadError(error instanceof Error ? error.message : String(error));
     } finally {
       setRobloxReadBusy(false);
+    }
+  }
+
+  async function inspectRobloxEditSchema() {
+    if (!robloxConnection.connected) {
+      setRobloxSchemaError("Connect to Roblox Studio before inspecting its editing capabilities.");
+      return;
+    }
+    setRobloxSchemaBusy(true);
+    setRobloxSchemaError("");
+    setRobloxEditSchema(null);
+    try {
+      const schema = await invoke<unknown>("roblox_mcp_script_edit_schema");
+      setRobloxEditSchema(schema);
+    } catch (error) {
+      setRobloxSchemaError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setRobloxSchemaBusy(false);
     }
   }
 
@@ -960,9 +981,16 @@ export default function NetworkApp() {
                 <button className="button secondary" type="button" disabled={!robloxConnection.connected || robloxReadBusy || !robloxQuery.trim()} onClick={() => void runRobloxRead("inspect_instance", { path: robloxQuery.trim() })}><Boxes size={12} /> Inspect object</button>
                 <button className="button secondary" type="button" disabled={!robloxConnection.connected || robloxReadBusy} onClick={() => void runRobloxRead("get_console_output")}><Terminal size={12} /> Read Output</button>
                 <button className="button secondary" type="button" disabled={!robloxConnection.connected || robloxReadBusy} onClick={() => void runRobloxRead("screen_capture")}><Camera size={12} /> Capture viewport</button>
+                <button className="button secondary" type="button" disabled={!robloxConnection.connected || robloxSchemaBusy} onClick={() => void inspectRobloxEditSchema()}><ShieldCheck size={12} /> {robloxSchemaBusy ? "Checking edit support…" : "Inspect edit schema"}</button>
               </div>
             </div>
             {robloxReadBusy && <div className="roblox-read-status"><span className="roblox-live-dot" /> Requesting read-only data from Studio…</div>}
+            {robloxSchemaError && <div className="provider-alert error-alert roblox-error" role="alert">{robloxSchemaError}</div>}
+            {robloxEditSchema && <section className="roblox-read-result">
+              <div className="roblox-read-result-head"><strong>multi_edit capability schema</strong><span>INSPECTION ONLY</span></div>
+              <pre>{formatRobloxResult(robloxEditSchema)}</pre>
+              <div className="roblox-read-empty">This only reads the installed Studio tool definition. It does not edit scripts or enable write access.</div>
+            </section>}
             {robloxReadError && <div className="provider-alert error-alert roblox-error" role="alert">{robloxReadError}</div>}
             {robloxReadResult && <section className="roblox-read-result">
               <div className="roblox-read-result-head"><strong>{robloxReadResult.tool.replaceAll("_", " ")}</strong><span>READ ONLY</span></div>
