@@ -5,7 +5,7 @@ import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { invoke } from "@tauri-apps/api/core";
-import { Activity, ArrowRight, ArrowUpRight, Boxes, Cable, Camera, ChevronRight, Code2, Coins, Command, Copy, FileText, FolderOpen, FolderTree, Gamepad2, Home, LockKeyhole, LogOut, Mail, MessageCircle, Monitor, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, RefreshCw, Send, Settings2, ShieldCheck, Sparkles, Terminal, Users, X } from "lucide-react";
+import { Activity, ArrowRight, ArrowUpRight, Boxes, Cable, Camera, ChevronRight, Code2, Coins, Command, Copy, FileText, FolderOpen, FolderTree, Gamepad2, Home, LockKeyhole, LogOut, Mail, MessageCircle, Monitor, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, RefreshCw, Search, Send, Settings2, ShieldCheck, Sparkles, Terminal, Users, X } from "lucide-react";
 
 const URL = import.meta.env.VITE_SUPABASE_URL?.trim() ?? "";
 const PUBLIC_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? "";
