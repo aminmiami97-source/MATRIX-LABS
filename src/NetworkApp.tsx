@@ -34,7 +34,53 @@ type Attachment = { id: string; file: File; extractedText: string };
 type Message = { id: string; role: "user" | "assistant"; content: string; emailDraft?: EmailDraft };
 type Page = "home" | "chat" | "agents" | "roblox" | "settings" | "plugins" | "permissions" | "credits";
 type RobloxConnection = { connected: boolean; tools?: string[]; studios?: unknown; serverInfo?: { name?: string; version?: string }; protocolVersion?: string; exitStatus?: string };
+type RobloxStudioOption = { id: string; name: string; placeId?: string };
+type RobloxReadResult = { tool: string; value: unknown };
 
+function findRobloxStudios(value: unknown, depth = 0): RobloxStudioOption[] {
+  if (depth > 7 || value == null) return [];
+  if (typeof value === "string") {
+    try { return findRobloxStudios(JSON.parse(value) as unknown, depth + 1); } catch { return []; }
+  }
+  if (Array.isArray(value)) return value.flatMap(item => findRobloxStudios(item, depth + 1));
+  if (typeof value !== "object") return [];
+  const record = value as Record<string, unknown>;
+  const id = record.studio_id ?? record.studioId;
+  const name = record.name ?? record.studioName;
+  const placeId = record.place_id ?? record.placeId;
+  const own = typeof id === "string" && id.trim()
+    ? [{ id, name: typeof name === "string" ? name : "Roblox Studio", placeId: typeof placeId === "string" || typeof placeId === "number" ? String(placeId) : undefined }]
+    : [];
+  return [...own, ...Object.values(record).flatMap(item => findRobloxStudios(item, depth + 1))];
+}
+function formatRobloxResult(value: unknown): string {
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    if (Array.isArray(record.content)) {
+      const textItems = record.content
+        .filter((item): item is Record<string, unknown> => !!item && typeof item === "object")
+        .filter(item => item.type === "text" && typeof item.text === "string")
+        .map(item => String(item.text));
+      if (textItems.length) return textItems.join("\\n\\n");
+    }
+  }
+  return typeof value === "string" ? value : JSON.stringify(value, null, 2);
+}
+function findRobloxImage(value: unknown): { data: string; mimeType: string } | null {
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  if (Array.isArray(record.content)) {
+    for (const item of record.content) {
+      if (item && typeof item === "object") {
+        const image = item as Record<string, unknown>;
+        if (image.type === "image" && typeof image.data === "string") {
+          return { data: image.data, mimeType: typeof image.mimeType === "string" ? image.mimeType : "image/png" };
+        }
+      }
+    }
+  }
+  return null;
+}
 function localKey(uid: string, part: string) { return "matrix." + uid + "." + part; }
 function read<T>(key: string, fallback: T): T {
   try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) as T : fallback; } catch { return fallback; }
@@ -126,6 +172,11 @@ export default function NetworkApp() {
   const [robloxConnection, setRobloxConnection] = useState<RobloxConnection>({ connected: false, tools: [] });
   const [robloxBusy, setRobloxBusy] = useState(false);
   const [robloxError, setRobloxError] = useState("");
+  const [robloxStudioId, setRobloxStudioId] = useState("");
+  const [robloxQuery, setRobloxQuery] = useState("");
+  const [robloxReadBusy, setRobloxReadBusy] = useState(false);
+  const [robloxReadError, setRobloxReadError] = useState("");
+  const [robloxReadResult, setRobloxReadResult] = useState<RobloxReadResult | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => read("matrix.ui.sidebarCollapsed", false));
   const [agentPanelCollapsed, setAgentPanelCollapsed] = useState(() => read("matrix.ui.agentPanelCollapsed", false));
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -206,6 +257,32 @@ export default function NetworkApp() {
       setRobloxError(error instanceof Error ? error.message : String(error));
     } finally {
       setRobloxBusy(false);
+    }
+  }
+
+  async function runRobloxRead(tool: string, argumentsValue: Record<string, unknown> = {}) {
+    if (!robloxConnection.connected) {
+      setRobloxReadError("Connect to Roblox Studio before using the read-only tools.");
+      return;
+    }
+    if (!robloxStudioId.trim()) {
+      setRobloxReadError("Select a Studio instance first. If no instances appear, copy its Studio ID from the discovery response.");
+      return;
+    }
+    setRobloxReadBusy(true);
+    setRobloxReadError("");
+    setRobloxReadResult(null);
+    try {
+      const value = await invoke<unknown>("roblox_mcp_read_tool", {
+        toolName: tool,
+        studioId: robloxStudioId.trim(),
+        arguments: argumentsValue
+      });
+      setRobloxReadResult({ tool, value });
+    } catch (error) {
+      setRobloxReadError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setRobloxReadBusy(false);
     }
   }
 
@@ -852,16 +929,50 @@ export default function NetworkApp() {
             </section>
           </div>
           <section className="panel roblox-modules">
-            <div className="panel-head"><div><div className="eyebrow">READ-ONLY WORKSPACE</div><h3>Studio tools</h3></div><ShieldCheck size={16} /></div>
+            <div className="panel-head"><div><div className="eyebrow">READ-ONLY STUDIO WORKSPACE</div><h3>Explore your game</h3></div><ShieldCheck size={16} /></div>
+            <div className="roblox-studio-picker">
+              <label htmlFor="roblox-studio-id">TARGET STUDIO INSTANCE</label>
+              {findRobloxStudios(robloxConnection.studios).length > 0
+                ? <select id="roblox-studio-id" value={robloxStudioId} onChange={event => setRobloxStudioId(event.target.value)}>
+                    <option value="">Select a Studio instance…</option>
+                    {findRobloxStudios(robloxConnection.studios).map(studio => <option key={studio.id} value={studio.id}>{studio.name}{studio.placeId ? " · Place " + studio.placeId : ""}</option>)}
+                  </select>
+                : <input id="roblox-studio-id" value={robloxStudioId} onChange={event => setRobloxStudioId(event.target.value)} placeholder="Studio ID from the discovery response" />}
+              <span>Every read request is explicitly targeted to one Studio window.</span>
+            </div>
+            <div className="roblox-read-tools">
+              <label htmlFor="roblox-read-query">PATH OR SEARCH TERM</label>
+              <input id="roblox-read-query" value={robloxQuery} onChange={event => setRobloxQuery(event.target.value)} placeholder="e.g. game.ServerScriptService or RoundManager" />
+              <div className="roblox-read-actions">
+                <button className="button secondary" type="button" disabled={!robloxConnection.connected || robloxReadBusy} onClick={() => void runRobloxRead("search_game_tree", { path: robloxQuery.trim() || "game", max_depth: 4 })}><FolderTree size={12} /> Explore hierarchy</button>
+                <button className="button secondary" type="button" disabled={!robloxConnection.connected || robloxReadBusy || !robloxQuery.trim()} onClick={() => void runRobloxRead("script_search", { keywords: robloxQuery.trim() })}><Search size={12} /> Find scripts</button>
+                <button className="button secondary" type="button" disabled={!robloxConnection.connected || robloxReadBusy || !robloxQuery.trim()} onClick={() => void runRobloxRead("script_grep", { query: robloxQuery.trim() })}><Search size={12} /> Search code</button>
+                <button className="button secondary" type="button" disabled={!robloxConnection.connected || robloxReadBusy || !robloxQuery.trim()} onClick={() => void runRobloxRead("script_read", { target_file: robloxQuery.trim(), should_read_entire_file: true })}><Code2 size={12} /> Read script</button>
+                <button className="button secondary" type="button" disabled={!robloxConnection.connected || robloxReadBusy || !robloxQuery.trim()} onClick={() => void runRobloxRead("inspect_instance", { path: robloxQuery.trim() })}><Boxes size={12} /> Inspect object</button>
+                <button className="button secondary" type="button" disabled={!robloxConnection.connected || robloxReadBusy} onClick={() => void runRobloxRead("get_console_output")}><Terminal size={12} /> Read Output</button>
+                <button className="button secondary" type="button" disabled={!robloxConnection.connected || robloxReadBusy} onClick={() => void runRobloxRead("screen_capture")}><Camera size={12} /> Capture viewport</button>
+              </div>
+            </div>
+            {robloxReadBusy && <div className="roblox-read-status"><span className="roblox-live-dot" /> Requesting read-only data from Studio…</div>}
+            {robloxReadError && <div className="provider-alert error-alert roblox-error" role="alert">{robloxReadError}</div>}
+            {robloxReadResult && <section className="roblox-read-result">
+              <div className="roblox-read-result-head"><strong>{robloxReadResult.tool.replaceAll("_", " ")}</strong><span>READ ONLY</span></div>
+              {findRobloxImage(robloxReadResult.value) && <img className="roblox-viewport-image" alt="Roblox Studio viewport capture" src={"data:" + findRobloxImage(robloxReadResult.value)!.mimeType + ";base64," + findRobloxImage(robloxReadResult.value)!.data} />}
+              <pre>{formatRobloxResult(robloxReadResult.value)}</pre>
+            </section>}
+            {!robloxReadResult && !robloxReadBusy && <div className="roblox-read-empty"><FolderTree size={19} /><span>Choose a Studio instance, then explore the hierarchy, inspect objects, search scripts or read Studio Output.</span></div>}
+          </section>
+          <section className="panel roblox-modules">
+            <div className="panel-head"><div><div className="eyebrow">NEXT EDITING LAYER</div><h3>AI editing pipeline</h3></div><Sparkles size={16} /></div>
             <div className="roblox-module-grid">
-              <article><FolderTree size={18} /><strong>Explorer</strong><span>Hierarchy browsing will use the server's read-only game-tree tools.</span><small>COMING IN NEXT READ-ONLY PASS</small></article>
-              <article><Code2 size={18} /><strong>Script viewer</strong><span>Read and search Luau scripts. Editing is not enabled.</span><small>COMING IN NEXT READ-ONLY PASS</small></article>
-              <article><Boxes size={18} /><strong>Instance inspector</strong><span>Inspect selected object properties and attributes without changing them.</span><small>COMING IN NEXT READ-ONLY PASS</small></article>
-              <article><Terminal size={18} /><strong>Output</strong><span>Review Studio diagnostics and messages from a connected session.</span><small>COMING IN NEXT READ-ONLY PASS</small></article>
-              <article><Camera size={18} /><strong>Viewport capture</strong><span>Request a Studio screenshot when the server exposes that capability.</span><small>COMING IN NEXT READ-ONLY PASS</small></article>
+              <article><Code2 size={18} /><strong>Script editor</strong><span>Read scripts now. The next stage adds AI-generated edits with line-by-line diffs.</span><small>EDIT PREVIEW NEXT</small></article>
+              <article><FolderTree size={18} /><strong>Explorer changes</strong><span>Plan instance creation, renames and moves with a reviewable change list.</span><small>PLANNED</small></article>
+              <article><Boxes size={18} /><strong>Property changes</strong><span>Prepare typed property updates and inspect the exact target before applying.</span><small>PLANNED</small></article>
+              <article><ShieldCheck size={18} /><strong>Approval gate</strong><span>Approve one complete batch after reviewing every target and proposed change.</span><small>REQUIRED</small></article>
+              <article><RefreshCw size={18} /><strong>Recovery history</strong><span>Keep before/after snapshots and a local record of applied operations.</span><small>PLANNED</small></article>
             </div>
           </section>
-          <div className="notice"><ShieldCheck size={13} /><span><strong>Protected by default.</strong> This release only connects and discovers capabilities. It does not edit scripts, execute Luau, insert assets, start playtests, or run arbitrary Windows commands.</span></div>
+          <div className="notice"><ShieldCheck size={13} /><span><strong>Protected by default.</strong> This workspace only calls allowlisted read-only tools. Script edits, instance changes, Luau execution, asset insertion and playtesting remain blocked until the preview-and-approval layer is implemented.</span></div>
         </>}
         {page === "home" && <>
           {title("Your command center.", "Your MATRIX workspace, conversations, and tools at a glance.", createButton)}
