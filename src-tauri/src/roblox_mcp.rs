@@ -108,7 +108,7 @@ pub fn roblox_mcp_connect(state: State<'_, RobloxMcpState>) -> Result<Value, Str
             }
         });
 
-        let mut session = McpSession { child, stdin, responses: rx, next_id: 1, tools: Vec::new() };
+        let mut session = McpSession { child, stdin, responses: rx, next_id: 1, tools: Vec::new(), tool_schemas: Vec::new() };
         let init = request(&mut session, "initialize", json!({
             "protocolVersion":"2024-11-05",
             "capabilities":{},
