@@ -36,6 +36,23 @@ type Page = "home" | "chat" | "agents" | "roblox" | "settings" | "plugins" | "pe
 type RobloxConnection = { connected: boolean; tools?: string[]; studios?: unknown; serverInfo?: { name?: string; version?: string }; protocolVersion?: string; exitStatus?: string };
 type RobloxStudioOption = { id: string; name: string; placeId?: string };
 type RobloxReadResult = { tool: string; value: unknown };
+type RobloxEditOperation = { id: string; kind: "script_replace"; target: string; before: string; after: string; createdAt: string };
+function buildLineDiff(before: string, after: string): { kind: "same" | "add" | "remove"; text: string }[] {
+  const left = before.replace(/\r\n?/g, "\n").split("\n");
+  const right = after.replace(/\r\n?/g, "\n").split("\n");
+  const rows = Math.min(left.length, 500), cols = Math.min(right.length, 500);
+  const dp = Array.from({ length: rows + 1 }, () => new Uint16Array(cols + 1));
+  for (let i = rows - 1; i >= 0; i--) for (let j = cols - 1; j >= 0; j--) dp[i][j] = left[i] === right[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+  const diff: { kind: "same" | "add" | "remove"; text: string }[] = [];
+  let i = 0, j = 0;
+  while (i < rows || j < cols) {
+    if (i < rows && j < cols && left[i] === right[j]) { diff.push({ kind: "same", text: left[i] }); i++; j++; }
+    else if (j < cols && (i === rows || dp[i][j + 1] >= dp[i + 1][j])) diff.push({ kind: "add", text: right[j++] });
+    else if (i < rows) diff.push({ kind: "remove", text: left[i++] });
+  }
+  if (left.length > rows || right.length > cols) diff.push({ kind: "same", text: "… diff limited to first 500 lines per version …" });
+  return diff;
+}
 
 function findRobloxStudios(value: unknown, depth = 0): RobloxStudioOption[] {
   if (depth > 7 || value == null) return [];
@@ -179,6 +196,11 @@ export default function NetworkApp() {
   const [robloxEditSchema, setRobloxEditSchema] = useState<unknown>(null);
   const [robloxSchemaBusy, setRobloxSchemaBusy] = useState(false);
   const [robloxSchemaError, setRobloxSchemaError] = useState("");
+  const [robloxEditTarget, setRobloxEditTarget] = useState("");
+  const [robloxEditBefore, setRobloxEditBefore] = useState("");
+  const [robloxEditAfter, setRobloxEditAfter] = useState("");
+  const [robloxEditPlan, setRobloxEditPlan] = useState<RobloxEditOperation[]>([]);
+  const [robloxPlanPreview, setRobloxPlanPreview] = useState(false);
   const [robloxPlanTask, setRobloxPlanTask] = useState("");
   const [robloxPlanTarget, setRobloxPlanTarget] = useState("");
   const [robloxPlanBefore, setRobloxPlanBefore] = useState("");
@@ -1064,8 +1086,27 @@ export default function NetworkApp() {
             </div>}
           </section>
 
+          <section className="panel roblox-planner">
+            <div className="panel-head"><div><div className="eyebrow">8.4.0 · EDIT PLANNER PREVIEW</div><h3>Prepare a script change</h3></div><Sparkles size={16} /></div>
+            <p className="roblox-planner-intro">Create a typed, reviewable script-edit operation. This planner is local-only; it does not write to Studio.</p>
+            <div className="roblox-plan-fields">
+              <label htmlFor="roblox-edit-target">SCRIPT TARGET PATH</label>
+              <input id="roblox-edit-target" value={robloxEditTarget} onChange={e => { setRobloxEditTarget(e.target.value); setRobloxPlanPreview(false); }} placeholder="game.ServerScriptService.RoundManager" maxLength={512} />
+              <div className="roblox-plan-columns">
+                <div><label htmlFor="roblox-edit-before">CURRENT SCRIPT CONTENT</label><textarea id="roblox-edit-before" value={robloxEditBefore} onChange={e => { setRobloxEditBefore(e.target.value); setRobloxPlanPreview(false); }} placeholder="Paste the current script…" rows={9} /></div>
+                <div><label htmlFor="roblox-edit-after">PROPOSED SCRIPT CONTENT</label><textarea id="roblox-edit-after" value={robloxEditAfter} onChange={e => { setRobloxEditAfter(e.target.value); setRobloxPlanPreview(false); }} placeholder="Paste the proposed replacement…" rows={9} /></div>
+              </div>
+              <div className="roblox-plan-actions"><button className="button primary" type="button" disabled={!robloxEditTarget.trim() || !robloxEditBefore.trim() || !robloxEditAfter.trim() || robloxEditBefore === robloxEditAfter} onClick={() => { setRobloxEditPlan([{ id: crypto.randomUUID(), kind: "script_replace", target: robloxEditTarget.trim(), before: robloxEditBefore, after: robloxEditAfter, createdAt: new Date().toISOString() }]); setRobloxPlanPreview(true); }}><Code2 size={13} /> Build diff preview</button><span>One script replacement · no Studio write</span></div>
+            </div>
+            {robloxPlanPreview && robloxEditPlan.length > 0 && <div className="roblox-plan-preview">
+              <div className="roblox-read-result-head"><strong>Proposed operation · script replace</strong><span>NOT APPLIED</span></div>
+              <div className="roblox-plan-target">{robloxEditPlan[0].target}</div>
+              <div className="roblox-diff">{buildLineDiff(robloxEditPlan[0].before, robloxEditPlan[0].after).map((line, index) => <div className={"roblox-diff-line " + line.kind} key={index}><span>{line.kind === "add" ? "+" : line.kind === "remove" ? "−" : " "}</span><code>{line.text || " "}</code></div>)}</div>
+              <div className="roblox-read-empty">Before any write is enabled, the next stage must re-read the live script, reject stale previews, validate the live MCP schema, and bind approval to a one-time plan hash.</div>
+            </div>}
+          </section>
           <section className="panel roblox-modules">
-            <div className="panel-head"><div><div className="eyebrow">NEXT EDITING LAYER</div><h3>AI editing pipeline</h3></div><Sparkles size={16} /></div>
+            <div className="panel-head"><div><div className="eyebrow">EDITING PIPELINE</div><h3>AI editing pipeline</h3></div><Sparkles size={16} /></div>
             <div className="roblox-module-grid">
               <article><Code2 size={18} /><strong>Script editor</strong><span>Read scripts now. The next stage adds AI-generated edits with line-by-line diffs.</span><small>EDIT PREVIEW NEXT</small></article>
               <article><FolderTree size={18} /><strong>Explorer changes</strong><span>Plan instance creation, renames and moves with a reviewable change list.</span><small>PLANNED</small></article>
