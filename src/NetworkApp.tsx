@@ -57,11 +57,10 @@ function formatRobloxResult(value: unknown): string {
   if (value && typeof value === "object") {
     const record = value as Record<string, unknown>;
     if (Array.isArray(record.content)) {
-      const textItems = record.content
-        .filter((item): item is Record<string, unknown> => !!item && typeof item === "object")
-        .filter(item => item.type === "text" && typeof item.text === "string")
-        .map(item => String(item.text));
+      const contentItems = record.content.filter((item): item is Record<string, unknown> => !!item && typeof item === "object");
+      const textItems = contentItems.filter(item => item.type === "text" && typeof item.text === "string").map(item => String(item.text));
       if (textItems.length) return textItems.join("\\n\\n");
+      if (contentItems.some(item => item.type === "image")) return "Screenshot captured successfully. The viewport preview is displayed above.";
     }
   }
   return typeof value === "string" ? value : JSON.stringify(value, null, 2);
