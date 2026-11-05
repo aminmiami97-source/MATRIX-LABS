@@ -101,3 +101,15 @@ The server uses stdio transport. It supports Studio discovery, DataModel hierarc
 ## Status
 
 The native connection foundation and initial workspace are merged. The next read-only workspace pass adds a target Studio selector, Explorer hierarchy queries, script search/read, instance inspection, Output retrieval, and viewport capture through a fixed Rust-side allowlist. The next editing milestone is a typed AI plan + exact diff + one-time approval token + audit/recovery record. Script writes, Luau execution, asset insertion, and playtesting remain disabled until their separate permission gates are implemented. No Roblox Studio connection is active until the user installs an updated Windows app and enables Studio's MCP server.
+
+
+## MATRIX LABS 8.4.0 — Edit planner preview
+
+- [x] Add a draft editor for one script replacement with a user request, exact target path, before snapshot, and proposed after content.
+- [x] Generate a unique preview ID and timestamp for each draft.
+- [x] Display the before and proposed-after snapshots side by side.
+- [ ] Next: capture live before-state directly from `script_read`, compute a compact line diff, and reject stale source snapshots.
+- [ ] Next: validate operation fields against the live `multi_edit` schema and calculate a canonical content hash.
+- [ ] Next: implement one-time approval tokens, local audit history, and recovery snapshots before enabling any mutation call.
+
+This first planner UI is deliberately a preview workspace, not an AI writer or an edit executor. Users can paste AGOORA's proposed script and inspect it; no Roblox write tool is invoked by this screen. The existing Rust read-only allowlist remains the security boundary.
