@@ -59,7 +59,7 @@ function formatRobloxResult(value: unknown): string {
     if (Array.isArray(record.content)) {
       const contentItems = record.content.filter((item): item is Record<string, unknown> => !!item && typeof item === "object");
       const textItems = contentItems.filter(item => item.type === "text" && typeof item.text === "string").map(item => String(item.text));
-      if (textItems.length) return textItems.join("\\n\\n");
+      if (textItems.length) return textItems.join("\n\n");
       if (contentItems.some(item => item.type === "image")) return "Screenshot captured successfully. The viewport preview is displayed above.";
     }
   }
@@ -176,6 +176,14 @@ export default function NetworkApp() {
   const [robloxReadBusy, setRobloxReadBusy] = useState(false);
   const [robloxReadError, setRobloxReadError] = useState("");
   const [robloxReadResult, setRobloxReadResult] = useState<RobloxReadResult | null>(null);
+
+  useEffect(() => {
+    const studios = findRobloxStudios(robloxConnection.studios);
+    if (studios.length && !studios.some(studio => studio.id === robloxStudioId)) {
+      setRobloxStudioId(studios[0].id);
+    }
+    if (!robloxConnection.connected) setRobloxStudioId("");
+  }, [robloxConnection.studios, robloxConnection.connected]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => read("matrix.ui.sidebarCollapsed", false));
   const [agentPanelCollapsed, setAgentPanelCollapsed] = useState(() => read("matrix.ui.agentPanelCollapsed", false));
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -252,6 +260,8 @@ export default function NetworkApp() {
     try {
       await invoke("roblox_mcp_disconnect");
       setRobloxConnection({ connected: false, tools: [] });
+      setRobloxStudioId("");
+      setRobloxReadResult(null);
     } catch (error) {
       setRobloxError(error instanceof Error ? error.message : String(error));
     } finally {
