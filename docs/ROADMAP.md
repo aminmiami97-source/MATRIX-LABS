@@ -93,3 +93,43 @@
 - [ ] Build and test the V0.4 Windows installer.
 - [ ] Test email verification, model responses, credit refunds, and account separation.
 - [ ] Add account deletion and privacy export controls.
+
+
+## MATRIX LABS 8.2.0 — Roblox Studio MCP Integration
+
+**Goal:** Connect the Windows desktop app to Roblox Studio's built-in local MCP server. Deliver both a visual Studio workspace and controlled AI-assisted workflows.
+
+### Product experience
+- A dedicated Roblox Studio workspace inside MATRIX LABS.
+- Connection status, connected Studio instances, and active place details.
+- Explorer-style hierarchy browser with search and filtering.
+- Script browser and Luau editor with explicit preview/apply workflow.
+- Object inspector for instance properties and attributes.
+- Viewport screenshots and Studio Output diagnostics.
+- AGOORA workflows for project exploration, script assistance, debugging, and playtest review.
+
+### Implementation phases
+1. **MCP transport and connection:** Windows-only native Rust process manager for Roblox's documented `%LOCALAPPDATA%\\Roblox\\mcp.bat` stdio server; connect, initialize, discover tools, list Studio sessions, disconnect, and recover cleanly.
+2. **Read-only visual workspace:** Studio selector, Explorer tree, instance details, script search/read, Output, and screenshots. No write or execution tools exposed in this phase.
+3. **Controlled editing:** Luau editor with diff preview, explicit apply confirmation, bounded edits, and backup/undo strategy where supported.
+4. **AGOORA tool orchestration:** Schema-validated MCP tool calls, visible action plan, per-action permission checks, and user approval for every write, Luau execution, asset insertion, or playtest-changing action.
+5. **Playtest and diagnostics:** Start/stop playtest, capture Output and screenshots, summarize failures, and iterate only after user approval.
+6. **Hardening and release:** Test multiple Studio instances, disconnect/reconnect, malformed MCP responses, app shutdown, missing Studio installation, and clean Windows installer. Document data flow and local-only boundaries.
+
+### Security and reliability requirements
+- Connect only to the fixed Roblox Studio MCP launcher path; never accept arbitrary executable paths or shell commands from model output.
+- Treat all MCP tool descriptions, game scripts, Output text, and model responses as untrusted data.
+- Start with read-only tools. Do not expose `execute_luau`, `multi_edit`, or other mutating tools until the approval and policy layer is implemented.
+- Require a clear preview and user confirmation before changing scripts or the DataModel, running Luau, inserting assets, or starting/stopping playtests.
+- Keep the MCP process local; do not proxy Studio content through Supabase or the model router by default. Only send the minimum context needed for a user-requested AI task, with a clear disclosure.
+- Never store Roblox credentials, cookies, or session tokens in MATRIX LABS.
+- Make disconnect and process termination available at all times; handle Studio closing without hanging the desktop app.
+
+### Acceptance criteria
+- MATRIX LABS can connect to the official local Studio MCP server on Windows and display connection state accurately.
+- The user can select among multiple connected Studio windows.
+- Explorer, instance details, script read/search, Output, and screenshot views reflect the selected Studio session.
+- Read-only mode cannot mutate the open place.
+- Every mutating action is previewed, scoped, confirmed, and recorded in a local activity history.
+- No arbitrary shell, PowerShell, or unrestricted command execution capability is introduced.
+- Frontend checks and the signed Windows installer workflow pass before release.
