@@ -376,6 +376,18 @@ internal static class TaskbarGlassManager
     /// </summary>
     private static string ApplyLegacyAccentAcrylic(List<TaskbarWindow> taskbars)
     {
+        // Persist the restore marker before changing any taskbar, so a disk-write
+        // failure can never leave an applied visual effect without a restore action.
+        Directory.CreateDirectory(BackupDirectory);
+        var marker = new
+        {
+            AppliedAtUtc = DateTimeOffset.UtcNow,
+            Method = "SetWindowCompositionAttribute / ACCENT_ENABLE_ACRYLICBLURBEHIND",
+            Displays = taskbars.Select(x => x.MonitorDevice).Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
+        };
+        File.WriteAllText(AccentBackupPath,
+            JsonSerializer.Serialize(marker, new JsonSerializerOptions { WriteIndented = true }));
+
         var changed = new List<TaskbarWindow>();
         foreach (var taskbar in taskbars)
         {
@@ -384,22 +396,13 @@ internal static class TaskbarGlassManager
                 foreach (var applied in changed)
                     _ = SetAccentPolicy(applied.Hwnd, AccentDisabled, 0);
 
+                try { File.Delete(AccentBackupPath); } catch { /* keep the original error */ }
                 int error = Marshal.GetLastWin32Error();
                 throw new InvalidOperationException(
                     $"Windows rejected the Adaptive Acrylic request for {taskbar.ClassName} on {taskbar.MonitorDevice} (Win32 error {error}). Any taskbars already changed were reset to the Windows-managed appearance.");
             }
             changed.Add(taskbar);
         }
-
-        Directory.CreateDirectory(BackupDirectory);
-        var marker = new
-        {
-            AppliedAtUtc = DateTimeOffset.UtcNow,
-            Method = "SetWindowCompositionAttribute / ACCENT_ENABLE_ACRYLICBLURBEHIND",
-            Displays = changed.Select(x => x.MonitorDevice).Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
-        };
-        File.WriteAllText(AccentBackupPath,
-            JsonSerializer.Serialize(marker, new JsonSerializerOptions { WriteIndented = true }));
 
         return $"MATRIX requested Acrylic on {changed.Count} taskbar window(s) using Windows Accent Composition. No helper app, Explorer injection, system-file replacement, or administrator permission was used. This Windows interface is undocumented and Explorer may reset the effect; check the taskbar visually. Restore returns it to the Windows-managed default appearance.";
     }
