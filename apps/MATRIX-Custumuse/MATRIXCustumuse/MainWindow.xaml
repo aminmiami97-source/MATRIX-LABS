@@ -184,7 +184,7 @@
                             Padding="10,5" Margin="0,0,12,0">
                         <StackPanel Orientation="Horizontal">
                             <Ellipse Width="6" Height="6" Fill="#A98BFF" VerticalAlignment="Center" Margin="0,0,7,0"/>
-                            <TextBlock Text="PREVIEW BUILD 0.3.1" FontSize="9" Foreground="#D7CFFF" FontWeight="SemiBold"/>
+                            <TextBlock Text="PREVIEW BUILD 0.3.2" FontSize="9" Foreground="#D7CFFF" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Border>
                     <Button Style="{StaticResource TitleBarButton}" Content="—" Click="Minimize_Click" Margin="0,0,5,0"/>
@@ -368,13 +368,13 @@
                                     <TextBlock Text="BUILT WITH CARE" Style="{StaticResource SectionLabel}"/>
                                     <TextBlock Text="Your PC stays in control." FontSize="16" FontWeight="SemiBold"
                                                Foreground="#F4F0FF" Margin="0,7,0,0"/>
-                                    <TextBlock Text="This preview changes only the appearance of this app. System customization features are not enabled yet."
+                                    <TextBlock Text="MATRIX Adaptive Glass is experimental. Review the detected compatibility route before applying any system appearance change."
                                                TextWrapping="Wrap" Foreground="#AAA6B8" FontSize="11" Margin="0,6,0,0"/>
                                 </StackPanel>
                             </Border>
                         </Grid>
 
-                        <TextBlock Text="MATRIX CUSTUMUSE  ·  WINDOWS 11  ·  PREVIEW 0.3.1"
+                        <TextBlock Text="MATRIX CUSTUMUSE  ·  WINDOWS 11  ·  PREVIEW 0.3.2"
                                    Foreground="#777386" FontSize="9" HorizontalAlignment="Right" Margin="0,18,2,0"/>
                     </StackPanel>
 
@@ -402,7 +402,7 @@
                                     <TextBlock x:Name="TaskbarEngineStatus" Text="Checking…" FontSize="18"
                                                FontWeight="SemiBold" Foreground="#F4F0FF" Margin="0,8,0,0"/>
                                     <TextBlock x:Name="TaskbarEngineDetail"
-                                               Text="Native Windows DWM control. No third-party taskbar helper is used."
+                                               Text="Adaptive engine: Windows Accent Acrylic on build 22000; DWM route on newer builds. No helper app is installed."
                                                Foreground="#AAA6B8" FontSize="11" TextWrapping="Wrap" MaxWidth="570" Margin="0,5,0,0"/>
                                     <TextBlock x:Name="TaskbarBuildStatus" Text="Windows build: detecting…"
                                                Foreground="#89849A" FontSize="10" Margin="0,9,0,0"/>
@@ -435,10 +435,10 @@
                                     </Border>
                                     <TextBlock Text="Acrylic. Violet.&#10;A little more depth." FontSize="27"
                                                FontWeight="SemiBold" Foreground="White" Margin="0,12,0,0"/>
-                                    <TextBlock Text="Apply a translucent violet Acrylic surface to the Windows taskbar. The effect follows the desktop, visible windows and maximized windows."
+                                    <TextBlock Text="Apply MATRIX's violet Acrylic material through the rendering route available on this Windows build. On build 22000 this uses the legacy Windows Accent Composition API; Explorer may reset it."
                                                TextWrapping="Wrap" Foreground="#C8C2D7" FontSize="12" Margin="0,8,0,14"/>
                                     <Button x:Name="ApplyTaskbarButton" Style="{StaticResource PrimaryButton}"
-                                            Content="Apply Liquid Glass to taskbar" HorizontalAlignment="Left"
+                                            Content="Apply MATRIX Glass to taskbar" HorizontalAlignment="Left"
                                             Click="ApplyLiquidGlass_Click" IsEnabled="False"/>
                                 </StackPanel>
 
@@ -481,7 +481,7 @@
                                     <TextBlock Text="BEFORE APPLYING" Style="{StaticResource SectionLabel}"/>
                                     <TextBlock Text="What will change" FontSize="16" FontWeight="SemiBold"
                                                Foreground="#F4F0FF" Margin="0,7,0,8"/>
-                                    <TextBlock Text="• Back up the current Windows DWM taskbar backdrop setting.&#10;• Request Windows Desktop Acrylic directly through DWM.&#10;• Apply the material request to the taskbar window.&#10;• Keep the previous backdrop value available for restore."
+                                    <TextBlock Text="• Detect each available Explorer taskbar window.&#10;• Select the rendering route supported by this Windows build.&#10;• Save a restore marker before applying the effect.&#10;• Report API failures and preserve the restore action."
                                                Foreground="#AAA6B8" FontSize="11" TextWrapping="Wrap" LineHeight="20"/>
                                 </StackPanel>
                             </Border>
@@ -503,20 +503,20 @@
                                     <TextBlock Text="RESTORE POINT" Style="{StaticResource SectionLabel}"/>
                                     <TextBlock Text="Return to your original taskbar look." FontSize="15"
                                                FontWeight="SemiBold" Foreground="#F4F0FF" Margin="0,7,0,0"/>
-                                    <TextBlock x:Name="TaskbarBackupStatus" Text="No taskbar backup has been created yet."
+                                    <TextBlock x:Name="TaskbarBackupStatus" Text="No MATRIX taskbar effect is active."
                                                FontSize="10" Foreground="#AAA6B8" Margin="0,5,0,0"/>
                                 </StackPanel>
                                 <Button x:Name="RestoreTaskbarButton" Grid.Column="1" Style="{StaticResource NavButton}"
-                                        Content="↶   Restore original" VerticalAlignment="Center"
+                                        Content="↶   Restore Windows default" VerticalAlignment="Center"
                                         Click="RestoreTaskbar_Click" IsEnabled="False"/>
                             </Grid>
                         </Border>
 
                         <TextBlock x:Name="TaskbarActionStatus" Text="Ready. Nothing changes until you review and confirm the apply action."
                                    Foreground="#BBA9F2" FontSize="11" TextWrapping="Wrap" Margin="3,14,3,0"/>
-                        <TextBlock Text="MATRIX Glass Engine calls the Windows Desktop Window Manager system-backdrop API directly on the taskbar window. Explorer remains untouched: no code is injected and no system files are replaced. This is experimental because Windows does not provide a dedicated public API for third-party taskbar styling."
+                        <TextBlock Text="MATRIX Glass Engine selects Windows Accent Composition on the Windows 11 22000 mixed taskbar and the DWM request on newer builds. The legacy accent interface is undocumented and Explorer may reset it. Custumuse does not install another app, inject code into Explorer, or replace system files. Restoring resets the taskbar to the Windows-managed default, not a previous third-party theme."
                                    Foreground="#858093" FontSize="9" TextWrapping="Wrap" Margin="3,10,3,0"/>
-                        <TextBlock Text="MATRIX CUSTUMUSE  ·  TASKBAR GLASS  ·  PREVIEW 0.2.0"
+                        <TextBlock Text="MATRIX CUSTUMUSE  ·  TASKBAR GLASS  ·  PREVIEW 0.3.2"
                                    Foreground="#777386" FontSize="9" HorizontalAlignment="Right" Margin="0,18,2,0"/>
                     </StackPanel>
                 </Grid>
