@@ -184,7 +184,7 @@
                             Padding="10,5" Margin="0,0,12,0">
                         <StackPanel Orientation="Horizontal">
                             <Ellipse Width="6" Height="6" Fill="#A98BFF" VerticalAlignment="Center" Margin="0,0,7,0"/>
-                            <TextBlock Text="PREVIEW BUILD 0.3.2" FontSize="9" Foreground="#D7CFFF" FontWeight="SemiBold"/>
+                            <TextBlock Text="PREVIEW BUILD 0.3.3" FontSize="9" Foreground="#D7CFFF" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Border>
                     <Button Style="{StaticResource TitleBarButton}" Content="—" Click="Minimize_Click" Margin="0,0,5,0"/>
@@ -374,7 +374,7 @@
                             </Border>
                         </Grid>
 
-                        <TextBlock Text="MATRIX CUSTUMUSE  ·  WINDOWS 11  ·  PREVIEW 0.3.2"
+                        <TextBlock Text="MATRIX CUSTUMUSE  ·  WINDOWS 11  ·  PREVIEW 0.3.3"
                                    Foreground="#777386" FontSize="9" HorizontalAlignment="Right" Margin="0,18,2,0"/>
                     </StackPanel>
 
@@ -516,7 +516,7 @@
                                    Foreground="#BBA9F2" FontSize="11" TextWrapping="Wrap" Margin="3,14,3,0"/>
                         <TextBlock Text="MATRIX Glass Engine selects Windows Accent Composition on the Windows 11 22000 mixed taskbar and the DWM request on newer builds. The legacy accent interface is undocumented and Explorer may reset it. Custumuse does not install another app, inject code into Explorer, or replace system files. Restoring resets the taskbar to the Windows-managed default, not a previous third-party theme."
                                    Foreground="#858093" FontSize="9" TextWrapping="Wrap" Margin="3,10,3,0"/>
-                        <TextBlock Text="MATRIX CUSTUMUSE  ·  TASKBAR GLASS  ·  PREVIEW 0.3.2"
+                        <TextBlock Text="MATRIX CUSTUMUSE  ·  TASKBAR GLASS  ·  PREVIEW 0.3.3"
                                    Foreground="#777386" FontSize="9" HorizontalAlignment="Right" Margin="0,18,2,0"/>
                     </StackPanel>
                 </Grid>

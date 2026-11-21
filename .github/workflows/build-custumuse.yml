@@ -32,7 +32,7 @@ jobs:
           $targets = @("win-x64", "win-x86", "win-arm64")
           foreach ($rid in $targets) {
             $publishPath = "artifacts/publish/$rid"
-            $zipPath = "artifacts/MATRIX-Custumuse-v0.3.2-$rid.zip"
+            $zipPath = "artifacts/MATRIX-Custumuse-v0.3.3-$rid.zip"
             dotnet publish "apps/MATRIX-Custumuse/MATRIXCustumuse/MATRIXCustumuse.csproj" -c Release -r $rid --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o $publishPath
             if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed for $rid with exit code $LASTEXITCODE" }
             Compress-Archive -Path "$publishPath/*" -DestinationPath $zipPath -CompressionLevel Optimal -Force
@@ -41,17 +41,17 @@ jobs:
       - name: Upload all Windows packages
         uses: actions/upload-artifact@v4
         with:
-          name: MATRIX-Custumuse-v0.3.2-windows
-          path: artifacts/MATRIX-Custumuse-v0.3.2-win-*.zip
+          name: MATRIX-Custumuse-v0.3.3-windows
+          path: artifacts/MATRIX-Custumuse-v0.3.3-win-*.zip
           if-no-files-found: error
           retention-days: 30
 
       - name: Publish preview release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: custumuse-v0.3.2
+          tag_name: custumuse-v0.3.3
           target_commitish: ${{ github.sha }}
-          name: MATRIX Custumuse v0.3.2 Preview
+          name: MATRIX Custumuse v0.3.3 Preview
           body: |
             Adaptive Glass compatibility preview for Windows 11 build 22000 and later.
 
@@ -61,9 +61,9 @@ jobs:
 
             Separate self-contained builds are included for x64, x86 and ARM64, with Per-Monitor-V2 DPI awareness and taskbar diagnostics.
           files: |
-            artifacts/MATRIX-Custumuse-v0.3.2-win-x64.zip
-            artifacts/MATRIX-Custumuse-v0.3.2-win-x86.zip
-            artifacts/MATRIX-Custumuse-v0.3.2-win-arm64.zip
+            artifacts/MATRIX-Custumuse-v0.3.3-win-x64.zip
+            artifacts/MATRIX-Custumuse-v0.3.3-win-x86.zip
+            artifacts/MATRIX-Custumuse-v0.3.3-win-arm64.zip
           draft: false
           prerelease: true
           fail_on_unmatched_files: true

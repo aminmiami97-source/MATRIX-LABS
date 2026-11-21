@@ -1,8 +1,8 @@
-# MATRIX Custumuse v0.3.2
+# MATRIX Custumuse v0.3.3
 
-MATRIX Custumuse is a Windows desktop personalization studio. The v0.3.2 preview adds an adaptive taskbar rendering route for Windows 11 build 22000 while retaining the newer DWM request route on build 22621+.
+MATRIX Custumuse is a Windows desktop personalization studio. The v0.3.3 preview adds an adaptive taskbar rendering route for Windows 11 build 22000 while retaining the newer DWM request route on build 22621+.
 
-## What's new in v0.3.2
+## What's new in v0.3.3
 
 - Windows 11 build 22000 uses the Windows Accent Composition Acrylic policy on detected taskbar windows.
 - Windows 11 build 22621+ retains the DWM system-backdrop request route.
