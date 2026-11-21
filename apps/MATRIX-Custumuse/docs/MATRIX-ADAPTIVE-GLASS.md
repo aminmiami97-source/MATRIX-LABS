@@ -1,47 +1,49 @@
 # MATRIX Adaptive Glass — Windows 11 build 22000 compatibility
 
-## Purpose
+## Implementation status
 
-Make MATRIX Custumuse choose a rendering strategy based on capabilities instead of treating build 22621 as the minimum version for the whole application.
+The v0.3.2 preview now implements the Windows Accent Composition Acrylic route for the Windows 11 21H2 mixed taskbar (build 22000). It keeps the DWM system-backdrop request route for Windows 11 build 22621+. The first implementation is committed to the compatibility branch and must still be visually tested on a real build-22000 PC.
 
-This document is an engineering plan, not a claim that Explorer taskbar styling already works on build 22000.
-
-## Capability tiers
+## Capability routes
 
 | Capability | Windows 11 22000 | Windows 11 22621+ |
 | --- | --- | --- |
-| WPF application runs | Yes | Yes |
-| Windows Composition host-backdrop capability | Available | Available |
-| DWM system backdrop attribute (DWMWA_SYSTEMBACKDROP_TYPE) | Not available | Available |
-| Direct, supported Explorer taskbar styling API | Not provided | Not provided |
+| WPF app runs | Yes | Yes |
+| Custumuse own-window Acrylic fallback | Windows Accent Composition | DWM system backdrop, then Accent fallback |
+| Explorer taskbar request | SetWindowCompositionAttribute Accent Policy | DWM system-backdrop request |
+| Dedicated supported public Explorer taskbar styling API | Not provided | Not provided |
 
-Microsoft documents the Composition system-backdrop interface from Windows 11 build 22000. Microsoft documents DWMWA_SYSTEMBACKDROP_TYPE from build 22621. Neither document defines a supported public API for applying those materials to Explorer's taskbar.
+## Windows 11 build 22000 implementation
 
-## Proposed engine architecture
+- Detect the primary and secondary Explorer taskbar windows.
+- Request ACCENT_ENABLE_ACRYLICBLURBEHIND through SetWindowCompositionAttribute using a violet ABGR tint.
+- No external taskbar helper is installed or launched.
+- No code is injected into Explorer; no Explorer binaries or system files are modified.
+- No registry values or administrator-protected resources are changed.
+- Save a local marker recording that Custumuse applied its taskbar effect.
+- Restore disables the Accent Policy and sends WM_DWMCOMPOSITIONCHANGED so Explorer can repaint its Windows-managed default appearance.
 
-1. **Capability probe** — detect OS build, DWM attribute availability, composition availability, transparency preference, high contrast, remote session, GPU/composition state, and display/taskbar geometry.
-2. **Native app material** — use the supported Windows composition material path for Custumuse's own surfaces when available. Fall back to an opaque theme when materials are unavailable.
-3. **Taskbar strategy** — keep direct DWM requests gated to build 22621+ and label them experimental. Never report success based only on a successful API call; verify read-back and ask for visual confirmation.
-4. **Build 22000 strategy** — investigate a separate user-session overlay prototype. It must be click-through, non-activating, aligned to each taskbar, multi-monitor/DPI aware, and easy to stop. If it cannot preserve taskbar interaction and shell stability, show preview-only mode rather than applying it.
-5. **Restore and safety** — save only settings MATRIX changes, never patch Explorer binaries, inject into Explorer, disable security features, or request elevation for a per-user appearance effect.
+## Limitations and honest status
 
-## Required validation before enabling the legacy taskbar mode
+SetWindowCompositionAttribute is an undocumented Windows interface. The build-22000 taskbar can reset its accent policy during shell state changes or after Explorer restarts. Custumuse deliberately does not inject hooks into Explorer to intercept those resets. A successful API response is not proof that the taskbar remains styled; the user must verify the visible result.
 
-- Test on Windows 11 build 22000 in a disposable test profile or virtual machine.
-- Verify Start, Search, pinned apps, notification area, taskbar context menus, drag/drop, auto-hide, and window activation still work.
-- Test top/bottom/left/right taskbar positions where supported, mixed DPI, multiple monitors, display hot-plug, sleep/resume, Explorer restart, and sign-out.
-- Verify the overlay does not steal clicks, keyboard focus, or accessibility navigation.
-- Verify Restore/Stop removes the overlay immediately and after a crash/restart.
-- Do not expose an Apply button until all critical interaction tests pass.
+The restore action returns the taskbar to the Windows-managed default appearance. Windows does not expose the prior Accent Policy through a documented getter, so Custumuse cannot reconstruct an earlier third-party taskbar accent exactly. The app discloses this before use.
 
-## User-facing compatibility labels
+On Windows 11 build 22621+, the project continues to try DWMWA_SYSTEMBACKDROP_TYPE. Microsoft documents that attribute for application windows, not as a dedicated API for Explorer's taskbar. The visible taskbar effect remains experimental there too.
 
-- **Native Acrylic request (22621+)** — experimental request; visual result must be checked.
-- **Adaptive preview (22000+)** — previews the intended appearance; does not claim the Explorer taskbar changed.
-- **Unsupported / reduced effects** — explain the specific missing capability and retain a usable solid-color fallback.
+## Required real-device validation
 
-## References
+- Test on Windows 11 build 22000, including Start, Search, pinned apps, notification area, taskbar context menus, and click behavior.
+- Test taskbar show/hide, focus changes, sleep/resume, Explorer restart, and sign-out/sign-in.
+- Test secondary displays and mixed-DPI layouts.
+- Confirm the effect stays visible without continuous reapplication or Explorer hooks.
+- Confirm Restore resets the effect and does not block taskbar interaction.
+- Keep build-22000 mode marked experimental until these checks pass on real hardware.
 
-- Microsoft Learn: ICompositionSupportsSystemBackdrop (introduced in Windows 11 10.0.22000.0): https://learn.microsoft.com/en-us/uwp/api/windows.ui.composition.icompositionsupportssystembackdrop
-- Microsoft Learn: DWMWINDOWATTRIBUTE; DWMWA_SYSTEMBACKDROP_TYPE is supported starting with Windows 11 build 22621: https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute
-- Microsoft Learn: Materials overview and fallback behavior: https://learn.microsoft.com/en-us/windows/apps/develop/ui/materials
+## Safety rules
+
+- Apply only in the normal signed-in user session; do not request administrator elevation.
+- Never patch Explorer binaries or inject code into Explorer.
+- Never disable Defender, Windows Update, or other security protections.
+- Never delete personal files or change pinned apps, icon order, or taskbar position.
+- Explain compatibility and restore limitations before applying.
