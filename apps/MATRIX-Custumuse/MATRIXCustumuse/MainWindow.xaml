@@ -184,7 +184,7 @@
                             Padding="10,5" Margin="0,0,12,0">
                         <StackPanel Orientation="Horizontal">
                             <Ellipse Width="6" Height="6" Fill="#A98BFF" VerticalAlignment="Center" Margin="0,0,7,0"/>
-                            <TextBlock Text="PREVIEW BUILD 0.1.1" FontSize="9" Foreground="#D7CFFF" FontWeight="SemiBold"/>
+                            <TextBlock Text="PREVIEW BUILD 0.2.0" FontSize="9" Foreground="#D7CFFF" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Border>
                     <Button Style="{StaticResource TitleBarButton}" Content="—" Click="Minimize_Click" Margin="0,0,5,0"/>
@@ -204,9 +204,9 @@
                     <DockPanel Margin="17,20,17,18">
                         <StackPanel DockPanel.Dock="Top">
                             <TextBlock Text="WORKSPACE" Style="{StaticResource SectionLabel}" Margin="9,0,0,11"/>
-                            <Button Style="{StaticResource NavButton}" Background="#2E9B7BFF" BorderBrush="#5BBAA4FF" Foreground="White" Content="⌂   Overview"/>
+                            <Button Style="{StaticResource NavButton}" Background="#2E9B7BFF" BorderBrush="#5BBAA4FF" Foreground="White" x:Name="OverviewNavButton" Content="⌂   Overview" Click="Overview_Click"/>
                             <Button Style="{StaticResource NavButton}" Content="◇   Theme Gallery"/>
-                            <Button Style="{StaticResource NavButton}" Content="◈   Liquid Glass" Click="Preview_Click"/>
+                            <Button Style="{StaticResource NavButton}" x:Name="TaskbarNavButton" Content="◈   Taskbar Glass" Click="TaskbarGlass_Click"/>
                             <Button Style="{StaticResource NavButton}" Content="↶   Restore Center"/>
                             <Button Style="{StaticResource NavButton}" Content="⌕   System Analysis"/>
                             <TextBlock Text="YOUR COLLECTION" Style="{StaticResource SectionLabel}" Margin="9,27,0,10"/>
@@ -235,7 +235,8 @@
                 </Border>
 
                 <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel Margin="30,25,30,28">
+                    <Grid>
+                    <StackPanel x:Name="OverviewPage" Margin="30,25,30,28" VerticalAlignment="Top">
                         <Grid Margin="0,0,0,20">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                             <StackPanel>
@@ -279,8 +280,8 @@
                                                FontWeight="SemiBold" Foreground="White" Margin="0,13,0,0"/>
                                     <TextBlock Text="A frosted, layered interface with translucent panels, gentle highlights and a soft violet glow."
                                                TextWrapping="Wrap" Foreground="#C2BED0" FontSize="12" Margin="0,9,0,16"/>
-                                    <Button Style="{StaticResource PrimaryButton}" Content="Explore Liquid Glass  →"
-                                            HorizontalAlignment="Left" Click="Preview_Click"/>
+                                    <Button Style="{StaticResource PrimaryButton}" Content="Open Taskbar Glass  →"
+                                            HorizontalAlignment="Left" Click="TaskbarGlass_Click"/>
                                 </StackPanel>
 
                                 <!-- Glass sample composition -->
@@ -373,9 +374,152 @@
                             </Border>
                         </Grid>
 
-                        <TextBlock Text="MATRIX CUSTUMUSE  ·  WINDOWS 11  ·  PREVIEW 0.1.1"
+                        <TextBlock Text="MATRIX CUSTUMUSE  ·  WINDOWS 11  ·  PREVIEW 0.2.0"
                                    Foreground="#777386" FontSize="9" HorizontalAlignment="Right" Margin="0,18,2,0"/>
                     </StackPanel>
+
+                    <StackPanel x:Name="TaskbarPage" Margin="30,25,30,28" VerticalAlignment="Top" Visibility="Collapsed">
+                        <Grid Margin="0,0,0,20">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="SYSTEM CUSTOMIZATION  /  TASKBAR" Style="{StaticResource SectionLabel}"/>
+                                <TextBlock Text="A frosted glass finish for your app bar." FontSize="27"
+                                           FontWeight="SemiBold" Foreground="#F8F5FF" Margin="0,7,0,0"/>
+                                <TextBlock Text="Start with the centered Windows app icons shown in your screenshot."
+                                           FontSize="12" Foreground="#B2AEC0" Margin="0,5,0,0"/>
+                            </StackPanel>
+                            <Border Grid.Column="1" Background="#1F7DD9A8" BorderBrush="#558DE7BD"
+                                    BorderThickness="1" CornerRadius="11" Padding="11,7" VerticalAlignment="Top">
+                                <TextBlock Text="CURRENT USER ONLY" FontSize="9" Foreground="#CFFFE4" FontWeight="Bold"/>
+                            </Border>
+                        </Grid>
+
+                        <Border Style="{StaticResource GlassCard}" Padding="18" Margin="0,0,0,17">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="TASKBAR ENGINE" Style="{StaticResource SectionLabel}"/>
+                                    <TextBlock x:Name="TaskbarEngineStatus" Text="Checking…" FontSize="18"
+                                               FontWeight="SemiBold" Foreground="#F4F0FF" Margin="0,8,0,0"/>
+                                    <TextBlock x:Name="TaskbarEngineDetail"
+                                               Text="The optional taskbar helper is checked separately from Windows."
+                                               Foreground="#AAA6B8" FontSize="11" TextWrapping="Wrap" MaxWidth="570" Margin="0,5,0,0"/>
+                                    <TextBlock x:Name="TaskbarBuildStatus" Text="Windows 11 build: detecting…"
+                                               Foreground="#89849A" FontSize="10" Margin="0,9,0,0"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" MinWidth="170">
+                                    <Button x:Name="InstallEngineButton" Style="{StaticResource PrimaryButton}"
+                                            Content="Install taskbar engine" Click="InstallTaskbarEngine_Click" Margin="0,0,0,8"/>
+                                    <Button Style="{StaticResource NavButton}" Content="↻   Check again"
+                                            HorizontalContentAlignment="Center" Click="RefreshTaskbar_Click"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <Border CornerRadius="22" BorderBrush="#70D8C5FF" BorderThickness="1"
+                                Background="#251E1B35" Padding="22" Margin="0,0,0,17">
+                            <Grid>
+                                <Grid.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#554A347C" Offset="0"/>
+                                        <GradientStop Color="#35252C4C" Offset="0.55"/>
+                                        <GradientStop Color="#25204460" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Grid.Background>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="300"/></Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center" MaxWidth="540">
+                                    <Border Background="#42FFFFFF" BorderBrush="#70FFFFFF" BorderThickness="1"
+                                            CornerRadius="8" Padding="8,4" HorizontalAlignment="Left">
+                                        <TextBlock Text="LIQUID GLASS · TASKBAR PACK" FontSize="9"
+                                                   Foreground="#E6DFFF" FontWeight="Bold"/>
+                                    </Border>
+                                    <TextBlock Text="Acrylic. Violet.&#10;A little more depth." FontSize="27"
+                                               FontWeight="SemiBold" Foreground="White" Margin="0,12,0,0"/>
+                                    <TextBlock Text="Apply a translucent violet Acrylic surface to the Windows taskbar. The effect follows the desktop, visible windows and maximized windows."
+                                               TextWrapping="Wrap" Foreground="#C8C2D7" FontSize="12" Margin="0,8,0,14"/>
+                                    <Button x:Name="ApplyTaskbarButton" Style="{StaticResource PrimaryButton}"
+                                            Content="Apply Liquid Glass to taskbar" HorizontalAlignment="Left"
+                                            Click="ApplyLiquidGlass_Click" IsEnabled="False"/>
+                                </StackPanel>
+
+                                <Grid Grid.Column="1" Margin="10,0,0,0">
+                                    <Ellipse Width="210" Height="150" Fill="#8D9876FF" Opacity="0.18"
+                                             HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <Ellipse.Effect><BlurEffect Radius="38"/></Ellipse.Effect>
+                                    </Ellipse>
+                                    <Border Width="270" Height="94" Background="#486E6A85" BorderBrush="#B0FFFFFF"
+                                            BorderThickness="1" CornerRadius="25" Padding="17"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <Border.Effect><DropShadowEffect Color="#090510" BlurRadius="24" ShadowDepth="7" Opacity="0.42"/></Border.Effect>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <Border Width="39" Height="39" Background="#33FFFFFF" BorderBrush="#55FFFFFF"
+                                                    BorderThickness="1" CornerRadius="12" Margin="3">
+                                                <TextBlock Text="⊞" Foreground="White" FontSize="23" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <Border Width="39" Height="39" Background="#33FFFFFF" BorderBrush="#55FFFFFF"
+                                                    BorderThickness="1" CornerRadius="12" Margin="3">
+                                                <TextBlock Text="◧" Foreground="White" FontSize="21" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <Border Width="39" Height="39" Background="#33FFFFFF" BorderBrush="#55FFFFFF"
+                                                    BorderThickness="1" CornerRadius="12" Margin="3">
+                                                <TextBlock Text="✦" Foreground="#D3BFFF" FontSize="23" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <Border Width="39" Height="39" Background="#33FFFFFF" BorderBrush="#55FFFFFF"
+                                                    BorderThickness="1" CornerRadius="12" Margin="3">
+                                                <TextBlock Text="●" Foreground="#FFFFFF" FontSize="19" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </Grid>
+                        </Border>
+
+                        <Grid Margin="0,0,0,17">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource GlassCard}" Padding="18" Margin="0,0,8,0">
+                                <StackPanel>
+                                    <TextBlock Text="BEFORE APPLYING" Style="{StaticResource SectionLabel}"/>
+                                    <TextBlock Text="What will change" FontSize="16" FontWeight="SemiBold"
+                                               Foreground="#F4F0FF" Margin="0,7,0,8"/>
+                                    <TextBlock Text="• Back up the current TranslucentTB settings file.&#10;• Set taskbar material to Acrylic with a muted violet tint.&#10;• Apply to desktop, visible-window and maximized-window states.&#10;• Hide the taskbar accent line."
+                                               Foreground="#AAA6B8" FontSize="11" TextWrapping="Wrap" LineHeight="20"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="1" Style="{StaticResource GlassCard}" Padding="18" Margin="8,0,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="WHAT WILL NOT CHANGE" Style="{StaticResource SectionLabel}"/>
+                                    <TextBlock Text="Your layout stays yours." FontSize="16" FontWeight="SemiBold"
+                                               Foreground="#F4F0FF" Margin="0,7,0,8"/>
+                                    <TextBlock Text="Pinned apps, icon order, taskbar position, personal files and Windows system binaries are not changed. No administrator permission is needed."
+                                               Foreground="#AAA6B8" FontSize="11" TextWrapping="Wrap" LineHeight="20"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <Border Style="{StaticResource GlassCard}" Padding="18">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="RESTORE POINT" Style="{StaticResource SectionLabel}"/>
+                                    <TextBlock Text="Return to your original taskbar look." FontSize="15"
+                                               FontWeight="SemiBold" Foreground="#F4F0FF" Margin="0,7,0,0"/>
+                                    <TextBlock x:Name="TaskbarBackupStatus" Text="No taskbar backup has been created yet."
+                                               FontSize="10" Foreground="#AAA6B8" Margin="0,5,0,0"/>
+                                </StackPanel>
+                                <Button x:Name="RestoreTaskbarButton" Grid.Column="1" Style="{StaticResource NavButton}"
+                                        Content="↶   Restore original" VerticalAlignment="Center"
+                                        Click="RestoreTaskbar_Click" IsEnabled="False"/>
+                            </Grid>
+                        </Border>
+
+                        <TextBlock x:Name="TaskbarActionStatus" Text="Ready. Nothing changes until you review and confirm the apply action."
+                                   Foreground="#BBA9F2" FontSize="11" TextWrapping="Wrap" Margin="3,14,3,0"/>
+                        <TextBlock Text="The taskbar helper is a separate open-source application. On modern Windows 11 it uses a helper within Explorer to restyle the taskbar's XAML surface. Compatibility can be affected by future Windows updates."
+                                   Foreground="#858093" FontSize="9" TextWrapping="Wrap" Margin="3,10,3,0"/>
+                        <TextBlock Text="MATRIX CUSTUMUSE  ·  TASKBAR GLASS  ·  PREVIEW 0.2.0"
+                                   Foreground="#777386" FontSize="9" HorizontalAlignment="Right" Margin="0,18,2,0"/>
+                    </StackPanel>
+                </Grid>
                 </ScrollViewer>
             </Grid>
         </Grid>
