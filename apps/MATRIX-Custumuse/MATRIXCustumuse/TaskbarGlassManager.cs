@@ -1,36 +1,48 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Security.Principal;
+using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 
 namespace MATRIXCustumuse;
 
+/// <summary>
+/// MATRIX's own taskbar material controller. It uses documented DWM APIs and does not
+/// install a third-party process, inject into Explorer, or modify Windows system files.
+/// Applying a backdrop to Explorer's taskbar HWND is experimental because Microsoft
+/// does not document a dedicated taskbar customization API.
+/// </summary>
 internal static class TaskbarGlassManager
 {
-    private const string PackageFamily = "28017CharlesMilette.TranslucentTB_v826wp6bftszj";
-    private const string StoreProductId = "9PF4KZ2VN4W9";
-    private const string SchemaUrl = "https://TranslucentTB.github.io/settings.schema.json";
-    private const string LiquidGlassTint = "#705A86C2";
+    private const int DwmwaSystemBackdropType = 38;
+    private const int DwmSystemBackdropAuto = 0;
+    private const int DwmSystemBackdropTransientWindow = 3;
+    private const string MainTaskbarClass = "Shell_TrayWnd";
+    private const string SecondaryTaskbarClass = "Shell_SecondaryTrayWnd";
 
-    private static string LocalAppData => Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-    private static string PackageRoot => Path.Combine(LocalAppData, "Packages", PackageFamily);
-    private static string SettingsDirectory => Path.Combine(PackageRoot, "RoamingState");
-    private static string SettingsPath => Path.Combine(SettingsDirectory, "settings.json");
-    private static string BackupDirectory => Path.Combine(LocalAppData, "MATRIX Custumuse", "Backups", "TaskbarGlass");
-    private static string BackupPath => Path.Combine(BackupDirectory, "taskbar-settings.original.json");
-    private static string ManifestPath => Path.Combine(BackupDirectory, "baseline.json");
-    private static string AppExecutionAlias => Path.Combine(LocalAppData, "Microsoft", "WindowsApps", "ttb.exe");
+    private static readonly string BackupDirectory = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "MATRIX Custumuse", "Backups", "TaskbarGlassDwm");
+    private static string BackupPath => Path.Combine(BackupDirectory, "dwm-taskbar-backup.json");
 
-    private static readonly JsonDocumentOptions JsonReadOptions = new()
-    {
-        AllowTrailingCommas = true,
-        CommentHandling = JsonCommentHandling.Skip
-    };
+    [DllImport("dwmapi.dll", PreserveSig = true)]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int attributeValue, int attributeSize);
+    [DllImport("dwmapi.dll", PreserveSig = true)]
+    private static extern int DwmGetWindowAttribute(IntPtr hwnd, int attribute, out int attributeValue, int attributeSize);
 
-    public static bool IsSupportedWindows11 => OperatingSystem.IsWindows() && Environment.OSVersion.Version.Build >= 22000;
+    private delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam);
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool EnumWindows(EnumWindowsProc callback, IntPtr lParam);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern int GetClassName(IntPtr hwnd, StringBuilder className, int maxCount);
+
+    public static bool IsSupportedWindows11 => OperatingSystem.IsWindows() && Environment.OSVersion.Version.Build >= 22621;
     public static int WindowsBuild => Environment.OSVersion.Version.Build;
+    public static bool HasBackup => File.Exists(BackupPath);
+    public static bool IsTaskbarAvailable => FindTaskbarWindows().Count > 0;
 
     public static bool IsElevated
     {
@@ -42,194 +54,199 @@ internal static class TaskbarGlassManager
         }
     }
 
-    public static bool HasBackup => File.Exists(ManifestPath);
+    public static bool IsLegacyTaskbarToolRunning
+    {
+        get
+        {
+            try { return Process.GetProcessesByName("TranslucentTB").Length > 0; }
+            catch { return false; }
+        }
+    }
 
-    // This build deliberately supports the Store/MSIX package location only.
-    public static bool IsEngineInstalled => Directory.Exists(PackageRoot) || File.Exists(AppExecutionAlias);
+    public static bool CanApply =>
+        IsSupportedWindows11 && !IsElevated && !IsLegacyTaskbarToolRunning && IsTaskbarAvailable;
 
     public static string GetEngineStatus()
     {
-        if (!IsSupportedWindows11) return "Windows 11 is required";
+        if (!OperatingSystem.IsWindows()) return "Windows is required";
+        if (!IsSupportedWindows11) return "Windows 11 build 22621 or later is required";
         if (IsElevated) return "Reopen Custumuse normally";
-        return IsEngineInstalled ? "Taskbar engine detected" : "Taskbar engine not installed";
+        if (IsLegacyTaskbarToolRunning) return "Close the other taskbar styling app first";
+        if (!IsTaskbarAvailable) return "Windows taskbar window not found";
+        return "MATRIX Glass Engine · Ready";
     }
 
-    public static void OpenStoreInstallPage()
+    public static string GetEngineDetail()
     {
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = $"ms-windows-store://pdp/?ProductId={StoreProductId}",
-            UseShellExecute = true
-        });
+        if (!IsSupportedWindows11)
+            return "The native DWM system-backdrop API requires Windows 11 build 22621 or later.";
+        if (IsElevated)
+            return "Close Custumuse and reopen it normally. Taskbar styling runs in your signed-in desktop session and does not need administrator elevation.";
+        if (IsLegacyTaskbarToolRunning)
+            return "Another taskbar styling app is running. Close it first so two appearance engines do not compete for the same taskbar.";
+        if (!IsTaskbarAvailable)
+            return "The Windows taskbar window could not be found. Sign in to the desktop and try Check taskbar again.";
+        return "Built into Custumuse. Uses Windows DWM directly; no TranslucentTB installation, background helper, or Explorer injection.";
     }
 
     public static string ApplyLiquidGlass()
     {
-        EnsureUserSession();
+        EnsureCanModify();
+        var taskbars = FindTaskbarWindows();
+        if (taskbars.Count == 0)
+            throw new InvalidOperationException("The Windows taskbar window was not found.");
 
-        if (!IsSupportedWindows11)
-            throw new InvalidOperationException("The taskbar glass pack currently supports Windows 11 only.");
-        if (!IsEngineInstalled)
-            throw new InvalidOperationException("Install TranslucentTB from the Microsoft Store first, launch it once, then return and select Check again.");
-
-        Directory.CreateDirectory(SettingsDirectory);
-
-        JsonObject root;
-        if (File.Exists(SettingsPath))
+        List<TaskbarWindowBackup> baseline;
+        if (File.Exists(BackupPath))
         {
-            try
-            {
-                root = JsonNode.Parse(File.ReadAllText(SettingsPath), documentOptions: JsonReadOptions) as JsonObject
-                    ?? throw new InvalidDataException("The existing TranslucentTB settings file is not a JSON object.");
-            }
-            catch (Exception ex) when (ex is JsonException or IOException)
-            {
-                throw new InvalidOperationException(
-                    "The existing taskbar-engine settings could not be read safely. No settings were changed. Validate the file with TranslucentTB before trying again.",
-                    ex);
-            }
+            baseline = ReadBackup();
         }
         else
         {
-            root = new JsonObject();
+            baseline = CaptureOriginalBackdrop(taskbars);
+            SaveBackup(baseline);
         }
 
-        SaveBaselineOnce();
+        var changed = new List<(IntPtr Hwnd, int Original)>();
+        foreach (var taskbar in taskbars)
+        {
+            int original = FindOriginalBackdrop(baseline, taskbar.ClassName, taskbar.Index);
+            int desired = DwmSystemBackdropTransientWindow;
+            int hr = DwmSetWindowAttribute(taskbar.Hwnd, DwmwaSystemBackdropType, ref desired, sizeof(int));
+            if (hr != 0)
+            {
+                RestoreChangedWindows(changed);
+                throw new InvalidOperationException(
+                    $"Windows rejected the Acrylic backdrop request for {taskbar.ClassName} (HRESULT 0x{hr:X8}). The original backdrop was restored where possible. This Windows build may not allow DWM material changes on the shell taskbar.");
+            }
+            changed.Add((taskbar.Hwnd, original));
+        }
 
-        root["$schema"] = SchemaUrl;
-        ConfigureAppearance(root, "desktop_appearance", "acrylic", LiquidGlassTint, 16.0, enabled: null);
-        ConfigureAppearance(root, "visible_window_appearance", "acrylic", LiquidGlassTint, 16.0, enabled: true);
-        ConfigureAppearance(root, "maximized_window_appearance", "acrylic", LiquidGlassTint, 16.0, enabled: true);
-
-        WriteAtomically(SettingsPath, root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
-
-        return TryStartEngine()
-            ? "Liquid Glass taskbar settings were saved. TranslucentTB will reload them automatically."
-            : "Liquid Glass settings were saved. Open TranslucentTB from Start once to activate the new appearance.";
+        return "MATRIX Glass Engine sent the Desktop Acrylic request to the Windows taskbar. Check the bar visually; Explorer may ignore or reset this request on some builds. Your original DWM backdrop setting is backed up.";
     }
 
     public static string RestoreOriginal()
     {
-        EnsureUserSession();
-        if (!File.Exists(ManifestPath))
-            throw new InvalidOperationException("There is no saved taskbar backup to restore.");
+        EnsureNormalSession();
+        if (!File.Exists(BackupPath))
+            throw new InvalidOperationException("There is no saved taskbar backdrop setting to restore.");
 
-        BackupManifest manifest;
-        try
-        {
-            manifest = JsonSerializer.Deserialize<BackupManifest>(File.ReadAllText(ManifestPath))
-                ?? throw new InvalidDataException("The backup record is empty.");
-        }
-        catch (Exception ex) when (ex is JsonException or IOException)
-        {
-            throw new InvalidOperationException("The saved taskbar backup record could not be read. The backup has been left untouched.", ex);
-        }
+        var baseline = ReadBackup();
+        var current = FindTaskbarWindows();
+        if (current.Count == 0)
+            throw new InvalidOperationException("Windows taskbar window was not found. Your backup has been kept.");
 
-        if (manifest.ConfigExisted)
+        foreach (var taskbar in current)
         {
-            if (!File.Exists(BackupPath))
-                throw new FileNotFoundException("The original taskbar settings backup is missing. Nothing was overwritten.", BackupPath);
-
-            Directory.CreateDirectory(SettingsDirectory);
-            string temp = SettingsPath + ".custumuse-restore.tmp";
-            File.Copy(BackupPath, temp, overwrite: true);
-            File.Move(temp, SettingsPath, overwrite: true);
-        }
-        else if (File.Exists(SettingsPath))
-        {
-            File.Delete(SettingsPath);
+            int original = FindOriginalBackdrop(baseline, taskbar.ClassName, taskbar.Index);
+            int hr = DwmSetWindowAttribute(taskbar.Hwnd, DwmwaSystemBackdropType, ref original, sizeof(int));
+            if (hr != 0)
+                throw new InvalidOperationException(
+                    $"Windows could not restore {taskbar.ClassName} (HRESULT 0x{hr:X8}). Your backup has been kept so you can retry.");
         }
 
-        File.Delete(ManifestPath);
-        if (File.Exists(BackupPath)) File.Delete(BackupPath);
-
-        return TryStartEngine()
-            ? "The original taskbar-engine settings were restored."
-            : "The original settings were restored. Open TranslucentTB from Start if it is not already running.";
+        File.Delete(BackupPath);
+        return "The original Windows DWM backdrop setting was restored.";
     }
 
-    private static void EnsureUserSession()
+    private static void EnsureCanModify()
+    {
+        EnsureNormalSession();
+        if (!IsSupportedWindows11)
+            throw new InvalidOperationException("The native taskbar glass experiment requires Windows 11 build 22621 or later.");
+        if (IsLegacyTaskbarToolRunning)
+            throw new InvalidOperationException("Close the other taskbar styling app first. Custumuse will not change taskbar appearance while another style engine is running.");
+    }
+
+    private static void EnsureNormalSession()
     {
         if (IsElevated)
-            throw new InvalidOperationException(
-                "Taskbar styling runs inside your normal Windows user session and does not need administrator rights. Close Custumuse and reopen it normally (do not choose Run as administrator).");
+            throw new InvalidOperationException("Close Custumuse and reopen it normally. This feature does not require administrator permission.");
     }
 
-    private static void ConfigureAppearance(JsonObject root, string propertyName, string accent, string color, double blurRadius, bool? enabled)
+    private static List<TaskbarWindow> FindTaskbarWindows()
     {
-        if (root[propertyName] is not JsonObject appearance)
+        var result = new List<TaskbarWindow>();
+        var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+        EnumWindows((hwnd, _) =>
         {
-            appearance = new JsonObject();
-            root[propertyName] = appearance;
-        }
+            var classNameBuffer = new StringBuilder(128);
+            int length = GetClassName(hwnd, classNameBuffer, classNameBuffer.Capacity);
+            if (length <= 0) return true;
 
-        if (enabled.HasValue) appearance["enabled"] = enabled.Value;
-        appearance["accent"] = accent;
-        appearance["color"] = color;
-        appearance["show_line"] = false;
-        appearance["blur_radius"] = blurRadius;
-    }
-
-    private static void SaveBaselineOnce()
-    {
-        if (File.Exists(ManifestPath)) return;
-
-        Directory.CreateDirectory(BackupDirectory);
-        bool existed = File.Exists(SettingsPath);
-        if (existed) File.Copy(SettingsPath, BackupPath, overwrite: true);
-
-        var manifest = new BackupManifest
-        {
-            ConfigExisted = existed,
-            CapturedAtUtc = DateTimeOffset.UtcNow
-        };
-
-        try
-        {
-            WriteAtomically(ManifestPath, JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true }));
-        }
-        catch
-        {
-            if (File.Exists(BackupPath)) File.Delete(BackupPath);
-            throw;
-        }
-    }
-
-    private static void WriteAtomically(string path, string contents)
-    {
-        string directory = Path.GetDirectoryName(path)
-            ?? throw new InvalidOperationException("The settings directory could not be determined.");
-        Directory.CreateDirectory(directory);
-        string temp = path + ".custumuse.tmp";
-        File.WriteAllText(temp, contents);
-        File.Move(temp, path, overwrite: true);
-    }
-
-    private static bool TryStartEngine()
-    {
-        try
-        {
-            if (Process.GetProcessesByName("TranslucentTB").Length > 0)
+            string className = classNameBuffer.ToString();
+            if (className != MainTaskbarClass && className != SecondaryTaskbarClass)
                 return true;
 
-            if (File.Exists(AppExecutionAlias))
-            {
-                Process.Start(new ProcessStartInfo { FileName = AppExecutionAlias, UseShellExecute = true });
-                return true;
-            }
-
-            Process.Start(new ProcessStartInfo { FileName = "ttb.exe", UseShellExecute = true });
+            counts.TryGetValue(className, out int index);
+            counts[className] = index + 1;
+            result.Add(new TaskbarWindow(hwnd, className, index));
             return true;
-        }
-        catch
+        }, IntPtr.Zero);
+        return result;
+    }
+
+    private static List<TaskbarWindowBackup> CaptureOriginalBackdrop(List<TaskbarWindow> taskbars)
+    {
+        var result = new List<TaskbarWindowBackup>();
+        foreach (var taskbar in taskbars)
         {
-            return false;
+            int hr = DwmGetWindowAttribute(taskbar.Hwnd, DwmwaSystemBackdropType, out int original, sizeof(int));
+            if (hr != 0)
+                throw new InvalidOperationException(
+                    $"Windows did not allow Custumuse to read the original backdrop setting on {taskbar.ClassName} (HRESULT 0x{hr:X8}). No taskbar setting was changed.");
+
+            result.Add(new TaskbarWindowBackup
+            {
+                ClassName = taskbar.ClassName,
+                Index = taskbar.Index,
+                OriginalBackdropType = original
+            });
+        }
+        return result;
+    }
+
+    private static int FindOriginalBackdrop(List<TaskbarWindowBackup> baseline, string className, int index)
+    {
+        var match = baseline.Find(x => x.ClassName == className && x.Index == index);
+        return match?.OriginalBackdropType ?? DwmSystemBackdropAuto;
+    }
+
+    private static void SaveBackup(List<TaskbarWindowBackup> baseline)
+    {
+        Directory.CreateDirectory(BackupDirectory);
+        string temp = BackupPath + ".tmp";
+        File.WriteAllText(temp, JsonSerializer.Serialize(baseline, new JsonSerializerOptions { WriteIndented = true }));
+        File.Move(temp, BackupPath, overwrite: true);
+    }
+
+    private static List<TaskbarWindowBackup> ReadBackup()
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<List<TaskbarWindowBackup>>(File.ReadAllText(BackupPath))
+                ?? throw new InvalidDataException("The taskbar backup file is empty.");
+        }
+        catch (Exception ex) when (ex is IOException or JsonException or InvalidDataException)
+        {
+            throw new InvalidOperationException("The taskbar backup could not be read. It has been left untouched.", ex);
         }
     }
 
-    private sealed class BackupManifest
+    private static void RestoreChangedWindows(List<(IntPtr Hwnd, int Original)> changed)
     {
-        public bool ConfigExisted { get; set; }
-        public DateTimeOffset CapturedAtUtc { get; set; }
+        foreach (var entry in changed)
+        {
+            int previous = entry.Original;
+            _ = DwmSetWindowAttribute(entry.Hwnd, DwmwaSystemBackdropType, ref previous, sizeof(int));
+        }
+    }
+
+    private sealed record TaskbarWindow(IntPtr Hwnd, string ClassName, int Index);
+    private sealed class TaskbarWindowBackup
+    {
+        public string ClassName { get; set; } = "";
+        public int Index { get; set; }
+        public int OriginalBackdropType { get; set; }
     }
 }

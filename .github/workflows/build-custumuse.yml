@@ -30,29 +30,29 @@ jobs:
         run: |
           dotnet publish "apps/MATRIX-Custumuse/MATRIXCustumuse/MATRIXCustumuse.csproj" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o "artifacts/publish"
           if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed with exit code $LASTEXITCODE" }
-          Compress-Archive -Path "artifacts/publish/*" -DestinationPath "artifacts/MATRIX-Custumuse-v0.2.0-win-x64.zip" -CompressionLevel Optimal -Force
+          Compress-Archive -Path "artifacts/publish/*" -DestinationPath "artifacts/MATRIX-Custumuse-v0.3.0-win-x64.zip" -CompressionLevel Optimal -Force
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MATRIX-Custumuse-v0.2.0-win-x64
-          path: artifacts/MATRIX-Custumuse-v0.2.0-win-x64.zip
+          name: MATRIX-Custumuse-v0.3.0-win-x64
+          path: artifacts/MATRIX-Custumuse-v0.3.0-win-x64.zip
           if-no-files-found: error
           retention-days: 30
 
       - name: Publish preview release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: custumuse-v0.2.0
+          tag_name: custumuse-v0.3.0
           target_commitish: ${{ github.sha }}
-          name: MATRIX Custumuse v0.2.0 Preview
+          name: MATRIX Custumuse v0.3.0 Preview
           body: |
-            First system customization module: a reversible Liquid Glass-inspired Acrylic taskbar preset.
+            First independent MATRIX Glass Engine experiment.
 
-            Custumuse integrates with the separate TranslucentTB Microsoft Store package. Install the helper per user, launch it once, then use Taskbar Glass in Custumuse. This feature does not require administrator permission and does not modify pinned apps or Windows system binaries.
+            No TranslucentTB dependency. Custumuse calls the Windows DWM system-backdrop API directly for the Explorer-owned taskbar window. This is experimental because Microsoft does not provide a dedicated public API for third-party taskbar styling. It may be rejected or ignored by some Windows builds.
 
-            On modern Windows 11, the helper uses a component within Explorer to style the taskbar XAML background. Compatibility can be affected by future Windows updates. Custumuse backs up and can restore the helper's original settings.
-          files: artifacts/MATRIX-Custumuse-v0.2.0-win-x64.zip
+            The effect is reversible: the original backdrop type is saved before applying, and Restore original writes the saved value back. No administrator permission or Explorer injection is used.
+          files: artifacts/MATRIX-Custumuse-v0.3.0-win-x64.zip
           draft: false
           prerelease: true
           fail_on_unmatched_files: true

@@ -80,28 +80,14 @@ public partial class MainWindow : Window
 
     private void RefreshTaskbarStatus()
     {
-        bool supported = TaskbarGlassManager.IsSupportedWindows11;
-        bool elevated = TaskbarGlassManager.IsElevated;
-        bool installed = TaskbarGlassManager.IsEngineInstalled;
-
         TaskbarBuildStatus.Text = $"Windows build: {TaskbarGlassManager.WindowsBuild}";
         TaskbarEngineStatus.Text = TaskbarGlassManager.GetEngineStatus();
-
-        if (!supported)
-            TaskbarEngineDetail.Text = "This pack needs Windows 11. No changes are available on this Windows version.";
-        else if (elevated)
-            TaskbarEngineDetail.Text = "Custumuse is running as administrator. Close it and reopen normally so it can work with your standard Windows taskbar session.";
-        else if (installed)
-            TaskbarEngineDetail.Text = "The per-user TranslucentTB package was detected. Custumuse can save and restore its taskbar appearance settings.";
-        else
-            TaskbarEngineDetail.Text = "Install the optional TranslucentTB package for your Windows account, launch it once, then return here and select Check again.";
-
-        InstallEngineButton.IsEnabled = supported && !elevated && !installed;
-        ApplyTaskbarButton.IsEnabled = supported && !elevated && installed;
-        RestoreTaskbarButton.IsEnabled = TaskbarGlassManager.HasBackup && !elevated;
+        TaskbarEngineDetail.Text = TaskbarGlassManager.GetEngineDetail();
+        ApplyTaskbarButton.IsEnabled = TaskbarGlassManager.CanApply;
+        RestoreTaskbarButton.IsEnabled = TaskbarGlassManager.HasBackup && !TaskbarGlassManager.IsElevated;
         TaskbarBackupStatus.Text = TaskbarGlassManager.HasBackup
-            ? "A copy of your original taskbar-engine settings is saved and can be restored."
-            : "No taskbar backup has been created yet.";
+            ? "Your original DWM backdrop setting is saved and can be restored."
+            : "No DWM taskbar backup has been created yet.";
     }
 
     private void Overview_Click(object sender, RoutedEventArgs e)
@@ -130,48 +116,28 @@ public partial class MainWindow : Window
         OverviewNavButton.Foreground = taskbarSelected ? normalForeground : Brushes.White;
 
         TaskbarNavButton.Background = taskbarSelected ? selectedBackground : Brushes.Transparent;
-        TaskbarNavButton.BorderBrush = taskbarSelected ? selectedBorder : Brushes.Transparent;
+        TaskbarNavButton.BorderBrush = taskbarSelected ? Brushes.Transparent : selectedBorder;
         TaskbarNavButton.Foreground = taskbarSelected ? Brushes.White : normalForeground;
     }
 
     private void RefreshTaskbar_Click(object sender, RoutedEventArgs e)
     {
         RefreshTaskbarStatus();
-        TaskbarActionStatus.Text = "Taskbar engine status refreshed.";
-    }
-
-    private void InstallTaskbarEngine_Click(object sender, RoutedEventArgs e)
-    {
-        if (MessageBox.Show(
-            "Custumuse uses TranslucentTB as a separate, optional open-source taskbar engine. The Microsoft Store installs it for your Windows account and does not require administrator permission.\n\nOn modern Windows 11, its helper runs within Explorer to style the taskbar's XAML background. This is not a Microsoft-supported taskbar styling API, so a future Windows update could affect compatibility. Custumuse does not bundle or modify that program.\n\nOpen its Microsoft Store page?",
-            "Install optional taskbar engine",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Information) != MessageBoxResult.Yes)
-            return;
-
-        try
-        {
-            TaskbarGlassManager.OpenStoreInstallPage();
-            TaskbarActionStatus.Text = "Microsoft Store opened. Install TranslucentTB, launch it once, then return and select Check again.";
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"The Microsoft Store page could not be opened.\n\n{ex.Message}",
-                "MATRIX Custumuse", MessageBoxButton.OK, MessageBoxImage.Warning);
-        }
+        TaskbarActionStatus.Text = "MATRIX Glass Engine status refreshed.";
     }
 
     private void ApplyLiquidGlass_Click(object sender, RoutedEventArgs e)
     {
         const string changePlan =
-            "MATRIX Custumuse will make these changes to your current Windows account:\n\n" +
-            "1. Save a backup of your existing TranslucentTB settings.\n" +
-            "2. Set the taskbar material to Acrylic with a muted violet tint.\n" +
-            "3. Apply to desktop, visible-window and maximized-window taskbar states.\n" +
-            "4. Hide the thin taskbar accent line.\n\n" +
-            "It will NOT change pinned apps, icon order, taskbar position, personal files or Windows system binaries. " +
-            "No administrator permission is needed. Use Restore original to put back your saved settings.\n\n" +
-            "Apply the Liquid Glass taskbar preset now?";
+            "MATRIX Custumuse will request the Windows Desktop Acrylic backdrop for your taskbar window:\\n\\n" +
+            "1. Read and save the current DWM backdrop setting for the taskbar.\\n" +
+            "2. Request Desktop Acrylic directly from Windows DWM.\\n" +
+            "3. Keep a backup so you can restore the original setting.\\n\\n" +
+            "It will NOT install another taskbar app, edit another app's settings, inject code into Explorer, " +
+            "replace system files, change pinned icons, change icon order, or move your taskbar.\\n\\n" +
+            "This is an experimental use of the documented DWM system-backdrop API on the Explorer-owned taskbar window. " +
+            "Windows may ignore or reset the request on some builds. No administrator permission is needed.\\n\\n" +
+            "Apply the MATRIX Glass Engine effect?";
 
         if (MessageBox.Show(changePlan, "Review taskbar changes", MessageBoxButton.YesNo,
                 MessageBoxImage.Question) != MessageBoxResult.Yes)
@@ -184,7 +150,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            TaskbarActionStatus.Text = "The taskbar preset was not applied.";
+            TaskbarActionStatus.Text = "The taskbar effect was not applied.";
             MessageBox.Show(ex.Message, "MATRIX Custumuse · Taskbar Glass",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             RefreshTaskbarStatus();
@@ -194,8 +160,9 @@ public partial class MainWindow : Window
     private void RestoreTaskbar_Click(object sender, RoutedEventArgs e)
     {
         if (MessageBox.Show(
-            "Restore the exact TranslucentTB settings that were present before the first Custumuse taskbar change? This removes the Custumuse preset and keeps your pinned apps and taskbar layout unchanged.",
-            "Restore original taskbar settings", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            "Restore the original DWM backdrop setting captured before the first MATRIX Glass Engine change? The saved backup is kept until Windows confirms the restore.",
+            "Restore original taskbar appearance", MessageBoxButton.YesNo,
+            MessageBoxImage.Question) != MessageBoxResult.Yes)
             return;
 
         try

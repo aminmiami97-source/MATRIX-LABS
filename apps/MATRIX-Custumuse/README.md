@@ -1,46 +1,35 @@
-# MATRIX Custumuse v0.2.0
+# MATRIX Custumuse v0.3.0
 
-A Windows 11 appearance customization app. This release introduces the first system customization module: a reversible Liquid Glass-inspired taskbar preset.
+The first independent MATRIX Glass Engine experiment for the Windows 11 taskbar.
 
-## What's new in v0.2.0
+## What's new
+- Removes the TranslucentTB integration entirely.
+- Uses MATRIX's own C# controller to call Windows Desktop Window Manager (DWM) APIs.
+- Detects Explorer taskbar windows: Shell_TrayWnd and Shell_SecondaryTrayWnd.
+- Requests Desktop Acrylic (DWMSBT_TRANSIENTWINDOW) on those taskbar windows.
+- Reads and backs up each taskbar window's original DWM backdrop type before applying.
+- Adds review-before-apply and restore-original flows.
+- Blocks applying when TranslucentTB is running so two taskbar style engines do not compete.
+- No administrator elevation, Explorer injection, DLL patching, system file replacement, or changes to pinned app layout.
 
-- New Taskbar Glass workspace.
-- Optional integration with the separate TranslucentTB Microsoft Store package.
-- Liquid Glass preset: Acrylic material with a muted violet tint.
-- Preset is configured for desktop, visible-window and maximized-window states.
-- Hides the taskbar accent line.
-- Backs up the existing taskbar-engine settings before the first apply.
-- Restore action restores the exact saved settings (or removes the generated config if none existed before).
-- Review-before-apply confirmation.
-- Current-user configuration only; no administrator rights requested.
-- Does not alter pinned icons, app order, taskbar position, personal files or Windows system binaries.
+## Important compatibility note
+Microsoft documents DWMWA_SYSTEMBACKDROP_TYPE (attribute 38) and DWMSBT_TRANSIENTWINDOW (value 3) as Desktop Acrylic on Windows 11 build 22621 and later.
 
-## Install the optional taskbar engine
+However, Microsoft does not provide a dedicated supported public API for third-party customization of the Explorer taskbar. Custumuse's direct DWM request against Explorer's taskbar HWND is therefore experimental. Windows may reject it, ignore the visual effect, or reset it during shell updates. The app checks the HRESULT and keeps the original setting for restoration. A successful DWM call does not guarantee every Windows build will visibly render Acrylic on the taskbar.
 
-The TranslucentTB package is not bundled with Custumuse. Install it separately from the Microsoft Store:
+Official API documentation:
+- https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute
+- https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwm_systembackdrop_type
 
-- Product ID: `9PF4KZ2VN4W9`
-- Official project: https://github.com/TranslucentTB/TranslucentTB
-- The Store package is installed per user and does not require administrator permission.
-
-After installing it, launch TranslucentTB once, return to Custumuse, open **Taskbar Glass**, and select **Check again**.
-
-The Custumuse integration supports the Microsoft Store/MSIX package settings location. Portable copies are not auto-detected in this release.
-
-## Important technical note
-
-Windows does not expose a supported public API for fully restyling the modern Windows 11 taskbar. TranslucentTB is a separate open-source helper that applies taskbar materials. On the modern XAML taskbar it uses a helper within Explorer to reach the taskbar's XAML background. This is not a Microsoft-supported taskbar styling contract and future Windows updates may affect it.
-
-Custumuse does not bundle TranslucentTB, patch Explorer binaries, inject its own code into Explorer, or request elevation. It writes only the helper's per-user `settings.json` file. TranslucentTB watches that file and reloads the settings. See https://translucenttb.dev/docs/how-it-works/ and https://translucenttb.github.io/config.html.
-
-## Build locally
-
-Requires the .NET 8 SDK on Windows.
+## Build
+Requires .NET 8 SDK on Windows.
 
 ```powershell
 dotnet publish .\MATRIXCustumuse\MATRIXCustumuse.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o .\publish
 ```
 
-## Compatibility
+## Safety and restore
+The taskbar effect applies to the current interactive Windows desktop. Custumuse stores its backup at:
+%LOCALAPPDATA%\MATRIX Custumuse\Backups\TaskbarGlassDwm\dwm-taskbar-backup.json
 
-Windows 11 x64. The taskbar module expects the TranslucentTB Microsoft Store/MSIX package for the current user. The executable is not code-signed; Windows may display an unknown-publisher warning.
+Use **Restore original** to restore the DWM backdrop type captured before applying. If Windows rejects the effect, Custumuse reports the HRESULT and attempts to return already-updated taskbar windows to their original values.
