@@ -27,18 +27,26 @@ public partial class MainWindow : Window
 
     private void ApplyDesktopAcrylicBackdrop()
     {
-        if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22621))
-        {
-            BackdropStatus.Text = "Glass-style fallback";
-            return;
-        }
-
         try
         {
             var hwnd = new WindowInteropHelper(this).Handle;
-            int backdropType = DwmSystemBackdropTransientWindow;
-            int result = DwmSetWindowAttribute(hwnd, DwmwaSystemBackdropType, ref backdropType, sizeof(int));
-            BackdropStatus.Text = result == 0 ? "Desktop Acrylic active" : "Glass-style fallback";
+
+            if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22621))
+            {
+                int backdropType = DwmSystemBackdropTransientWindow;
+                int result = DwmSetWindowAttribute(hwnd, DwmwaSystemBackdropType, ref backdropType, sizeof(int));
+                if (result == 0)
+                {
+                    BackdropStatus.Text = "Desktop Acrylic active";
+                    return;
+                }
+            }
+
+            // Compatibility path for Windows 11 build 22000 and as a fallback
+            // if the documented DWM backdrop request is unavailable.
+            BackdropStatus.Text = TaskbarGlassManager.TryApplyAcrylicBackdropToWindow(hwnd)
+                ? "Adaptive Acrylic active"
+                : "Glass-style fallback";
         }
         catch
         {

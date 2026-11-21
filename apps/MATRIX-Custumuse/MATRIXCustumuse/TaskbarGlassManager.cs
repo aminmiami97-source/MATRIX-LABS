@@ -25,6 +25,15 @@ internal static class TaskbarGlassManager
     private const int DwmSystemBackdropTransientWindow = 3;
     private const int DwmSystemBackdropTabbedWindow = 4;
 
+    // Windows 11 21H2 uses the mixed taskbar composition path. This Windows
+    // accent policy is undocumented, but is the available legacy path on build 22000.
+    private const int WcaAccentPolicy = 19;
+    private const int AccentDisabled = 0;
+    private const int AccentEnableAcrylicBlurBehind = 4;
+    private const int WmDwmCompositionChanged = 0x031E;
+    private const uint SmtoAbortIfHung = 0x0002;
+    private const uint MatrixVioletAcrylicTintAbgr = 0xC8FF7B9B;
+
     private const string MainTaskbarClass = "Shell_TrayWnd";
     private const string SecondaryTaskbarClass = "Shell_SecondaryTrayWnd";
     private const uint MonitorInfoPrimary = 1;
@@ -35,6 +44,7 @@ internal static class TaskbarGlassManager
         "MATRIX Custumuse", "Backups", "TaskbarGlassDwm");
 
     private static string BackupPath => Path.Combine(BackupDirectory, "dwm-taskbar-backup.json");
+    private static string AccentBackupPath => Path.Combine(BackupDirectory, "accent-taskbar-applied.json");
 
     [DllImport("dwmapi.dll", PreserveSig = true)]
     private static extern int DwmSetWindowAttribute(
@@ -43,6 +53,16 @@ internal static class TaskbarGlassManager
     [DllImport("dwmapi.dll", PreserveSig = true)]
     private static extern int DwmGetWindowAttribute(
         IntPtr hwnd, int attribute, out int attributeValue, int attributeSize);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowCompositionAttribute", ExactSpelling = true, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetWindowCompositionAttribute(
+        IntPtr hwnd, ref WindowCompositionAttributeData data);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr SendMessageTimeout(
+        IntPtr hwnd, uint message, IntPtr wParam, IntPtr lParam,
+        uint flags, uint timeout, out IntPtr result);
 
     private delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam);
     private delegate bool MonitorEnumProc(IntPtr monitor, IntPtr hdc, IntPtr rect, IntPtr data);
@@ -73,7 +93,15 @@ internal static class TaskbarGlassManager
     public static bool IsWindows => OperatingSystem.IsWindows();
     public static bool IsWindows11 => IsWindows && WindowsBuild >= 22000;
     public static bool IsSupportedAcrylicBuild => IsWindows11 && WindowsBuild >= 22621;
-    public static bool HasBackup => File.Exists(BackupPath);
+    private static bool HasAccentCompositionApi => OperatingSystem.IsWindows() &&
+        GetProcAddress(GetModuleHandle("user32.dll"), "SetWindowCompositionAttribute") != IntPtr.Zero;
+    public static bool HasBackup => File.Exists(BackupPath) || File.Exists(AccentBackupPath);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr GetModuleHandle(string moduleName);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Ansi, ExactSpelling = true, SetLastError = true)]
+    private static extern IntPtr GetProcAddress(IntPtr module, string procedureName);
 
     public static bool IsElevated
     {
@@ -101,7 +129,8 @@ internal static class TaskbarGlassManager
 
         bool elevated = IsElevated;
         bool legacyTool = IsLegacyTaskbarToolRunning;
-        bool canApply = IsSupportedAcrylicBuild && !elevated && !legacyTool && taskbars.Count > 0;
+        bool canApply = IsWindows11 && !elevated && !legacyTool && taskbars.Count > 0 &&
+            (IsSupportedAcrylicBuild || HasAccentCompositionApi);
 
         string status;
         string detail;
@@ -116,10 +145,15 @@ internal static class TaskbarGlassManager
             status = "Windows 10 detected · diagnostics only";
             detail = "The app can run here, but the Windows 11 Desktop Acrylic taskbar request is not available on Windows 10.";
         }
+        else if (!IsSupportedAcrylicBuild && !HasAccentCompositionApi)
+        {
+            status = "Windows 11 detected · no compatible material API";
+            detail = "This build does not expose the Windows Accent Composition entry point needed by MATRIX Adaptive Glass.";
+        }
         else if (!IsSupportedAcrylicBuild)
         {
-            status = "Windows 11 detected · Acrylic unavailable";
-            detail = "This Windows build is older than 22621. The DWM system-backdrop attribute used for Desktop Acrylic requires Windows 11 build 22621 or later.";
+            status = "MATRIX Adaptive Acrylic · Windows 11 22000+";
+            detail = "This older Windows 11 taskbar uses the mixed composition path. MATRIX can request Acrylic through Windows' Accent Composition API without a helper app or Explorer injection. The API is undocumented and Explorer may reset the appearance, so this mode is experimental.";
         }
         else if (elevated)
         {
@@ -149,7 +183,9 @@ internal static class TaskbarGlassManager
         report.AppendLine($"OS architecture: {OSArchitecture} · App architecture: {ProcessArchitecture}");
         report.AppendLine($"Displays detected: {monitors.Count}");
         report.AppendLine($"Taskbar windows detected: {taskbars.Count}");
-        report.AppendLine($"Desktop Acrylic API build requirement met: {(IsSupportedAcrylicBuild ? "Yes" : "No")}");
+        report.AppendLine($"DWM system-backdrop build requirement met: {(IsSupportedAcrylicBuild ? "Yes" : "No")}");
+        report.AppendLine($"Windows Accent Composition API available: {(HasAccentCompositionApi ? "Yes" : "No")}");
+        report.AppendLine($"Selected rendering route: {(IsSupportedAcrylicBuild ? "DWM system-backdrop request (22621+)" : "Accent Acrylic request (22000+; undocumented)")}");
         report.AppendLine($"Running elevated: {(elevated ? "Yes" : "No")}");
         report.AppendLine($"Other taskbar styling process detected: {(legacyTool ? "Yes" : "No")}");
         report.AppendLine();
@@ -179,7 +215,7 @@ internal static class TaskbarGlassManager
         report.AppendLine(detail);
         report.AppendLine();
         report.AppendLine("This diagnostic is read-only. It does not apply or change any taskbar setting.");
-        report.AppendLine("Important: Windows documents DWM Acrylic for application windows, not a dedicated Explorer taskbar styling API. A successful DWM call does not guarantee that Explorer will visibly render the material.");
+        report.AppendLine("Important: Windows does not provide a dedicated public API for third-party taskbar styling. The build 22000 Accent Composition route is undocumented and Explorer can reset the effect. A successful API call is not proof of permanent visual rendering.");
 
         return new TaskbarDiagnostics(
             status,
@@ -198,6 +234,9 @@ internal static class TaskbarGlassManager
         var taskbars = FindTaskbarWindows();
         if (taskbars.Count == 0)
             throw new InvalidOperationException("No Windows taskbar windows were found. Run taskbar diagnostics and check the Windows shell.");
+
+        if (!IsSupportedAcrylicBuild)
+            return ApplyLegacyAccentAcrylic(taskbars);
 
         var baseline = File.Exists(BackupPath) ? ReadBackup() : new List<TaskbarWindowBackup>();
         bool backupChanged = false;
@@ -266,6 +305,9 @@ internal static class TaskbarGlassManager
     {
         EnsureNormalSession();
 
+        if (!IsSupportedAcrylicBuild && File.Exists(AccentBackupPath))
+            return RestoreLegacyAccentAcrylic();
+
         if (!File.Exists(BackupPath))
             throw new InvalidOperationException("There is no saved taskbar backdrop setting to restore.");
 
@@ -313,8 +355,10 @@ internal static class TaskbarGlassManager
     private static void EnsureCanModify()
     {
         EnsureNormalSession();
-        if (!IsSupportedAcrylicBuild)
-            throw new InvalidOperationException("The Desktop Acrylic system-backdrop API requires Windows 11 build 22621 or later. The app can still run diagnostics on Windows 10 and older Windows 11 builds.");
+        if (!IsWindows11)
+            throw new InvalidOperationException("Taskbar Liquid Glass requires Windows 11. Diagnostics and the application interface remain available on Windows 10.");
+        if (!IsSupportedAcrylicBuild && !HasAccentCompositionApi)
+            throw new InvalidOperationException("Windows Accent Composition is unavailable on this installation, so MATRIX Adaptive Glass cannot apply a taskbar material.");
         if (IsLegacyTaskbarToolRunning)
             throw new InvalidOperationException("Close TranslucentTB before applying. MATRIX Glass Engine does not use it, but two taskbar styling processes can conflict.");
     }
@@ -323,6 +367,123 @@ internal static class TaskbarGlassManager
     {
         if (IsElevated)
             throw new InvalidOperationException("Close Custumuse and reopen it normally. This feature does not require administrator permission.");
+    }
+
+    /// <summary>
+    /// Applies the legacy Windows Accent Acrylic policy used by the mixed Windows 11
+    /// 21H2 taskbar. This is an undocumented Windows interface. It changes no files,
+    /// registry values, Explorer code, or administrator-protected resources.
+    /// </summary>
+    private static string ApplyLegacyAccentAcrylic(List<TaskbarWindow> taskbars)
+    {
+        // Persist the restore marker before changing any taskbar, so a disk-write
+        // failure can never leave an applied visual effect without a restore action.
+        Directory.CreateDirectory(BackupDirectory);
+        var marker = new
+        {
+            AppliedAtUtc = DateTimeOffset.UtcNow,
+            Method = "SetWindowCompositionAttribute / ACCENT_ENABLE_ACRYLICBLURBEHIND",
+            Displays = taskbars.Select(x => x.MonitorDevice).Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
+        };
+        File.WriteAllText(AccentBackupPath,
+            JsonSerializer.Serialize(marker, new JsonSerializerOptions { WriteIndented = true }));
+
+        var changed = new List<TaskbarWindow>();
+        foreach (var taskbar in taskbars)
+        {
+            if (!SetAccentPolicy(taskbar.Hwnd, AccentEnableAcrylicBlurBehind, MatrixVioletAcrylicTintAbgr))
+            {
+                foreach (var applied in changed)
+                    _ = SetAccentPolicy(applied.Hwnd, AccentDisabled, 0);
+
+                try { File.Delete(AccentBackupPath); } catch { /* keep the original error */ }
+                int error = Marshal.GetLastWin32Error();
+                throw new InvalidOperationException(
+                    $"Windows rejected the Adaptive Acrylic request for {taskbar.ClassName} on {taskbar.MonitorDevice} (Win32 error {error}). Any taskbars already changed were reset to the Windows-managed appearance.");
+            }
+            changed.Add(taskbar);
+        }
+
+        return $"MATRIX requested Acrylic on {changed.Count} taskbar window(s) using Windows Accent Composition. No helper app, Explorer injection, system-file replacement, or administrator permission was used. This Windows interface is undocumented and Explorer may reset the effect; check the taskbar visually. Restore returns it to the Windows-managed default appearance.";
+    }
+
+    private static string RestoreLegacyAccentAcrylic()
+    {
+        var taskbars = FindTaskbarWindows();
+        if (taskbars.Count == 0)
+            throw new InvalidOperationException("No taskbar windows were found. The restore marker has been kept so you can retry.");
+
+        int restored = 0;
+        foreach (var taskbar in taskbars)
+        {
+            if (!SetAccentPolicy(taskbar.Hwnd, AccentDisabled, 0))
+                throw new InvalidOperationException(
+                    $"Windows could not reset the Acrylic accent on {taskbar.MonitorDevice}. The restore marker has been kept so you can retry.");
+
+            _ = SendMessageTimeout(taskbar.Hwnd, WmDwmCompositionChanged, IntPtr.Zero, IntPtr.Zero,
+                SmtoAbortIfHung, 150, out _);
+            restored++;
+        }
+
+        File.Delete(AccentBackupPath);
+        return $"Reset {restored} taskbar window(s) to the Windows-managed default appearance. This restores Windows' default rendering; it cannot reconstruct a custom third-party accent policy that was active before MATRIX.";
+    }
+
+    private static bool SetAccentPolicy(IntPtr hwnd, int state, uint gradientColor)
+    {
+        var policy = new AccentPolicy
+        {
+            AccentState = state,
+            AccentFlags = state == AccentEnableAcrylicBlurBehind ? 2 : 0,
+            GradientColor = gradientColor,
+            AnimationId = 0
+        };
+
+        IntPtr memory = Marshal.AllocHGlobal(Marshal.SizeOf<AccentPolicy>());
+        try
+        {
+            Marshal.StructureToPtr(policy, memory, false);
+            var data = new WindowCompositionAttributeData
+            {
+                Attribute = WcaAccentPolicy,
+                Data = memory,
+                SizeOfData = Marshal.SizeOf<AccentPolicy>()
+            };
+            return SetWindowCompositionAttribute(hwnd, ref data);
+        }
+        catch (EntryPointNotFoundException)
+        {
+            return false;
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(memory);
+        }
+    }
+
+    public static bool TryApplyAcrylicBackdropToWindow(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero || !IsWindows11)
+            return false;
+
+        return SetAccentPolicy(hwnd, AccentEnableAcrylicBlurBehind, MatrixVioletAcrylicTintAbgr);
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct AccentPolicy
+    {
+        public int AccentState;
+        public int AccentFlags;
+        public uint GradientColor;
+        public int AnimationId;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct WindowCompositionAttributeData
+    {
+        public int Attribute;
+        public IntPtr Data;
+        public int SizeOfData;
     }
 
     private static List<TaskbarWindow> FindTaskbarWindows()
