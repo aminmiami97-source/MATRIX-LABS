@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   build-windows:
-    name: Build Windows x64 executable
+    name: Build Windows architecture packages
     runs-on: windows-latest
     steps:
       - name: Check out source
@@ -25,34 +25,42 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
-      - name: Publish self-contained executable
+      - name: Publish x64, x86 and ARM64 packages
         shell: pwsh
         run: |
-          dotnet publish "apps/MATRIX-Custumuse/MATRIXCustumuse/MATRIXCustumuse.csproj" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o "artifacts/publish"
-          if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed with exit code $LASTEXITCODE" }
-          Compress-Archive -Path "artifacts/publish/*" -DestinationPath "artifacts/MATRIX-Custumuse-v0.3.0-win-x64.zip" -CompressionLevel Optimal -Force
+          $targets = @("win-x64", "win-x86", "win-arm64")
+          foreach ($rid in $targets) {
+            $publishPath = "artifacts/publish/$rid"
+            $zipPath = "artifacts/MATRIX-Custumuse-v0.3.1-$rid.zip"
+            dotnet publish "apps/MATRIX-Custumuse/MATRIXCustumuse/MATRIXCustumuse.csproj" -c Release -r $rid --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o $publishPath
+            if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed for $rid with exit code $LASTEXITCODE" }
+            Compress-Archive -Path "$publishPath/*" -DestinationPath $zipPath -CompressionLevel Optimal -Force
+          }
 
-      - name: Upload build artifact
+      - name: Upload all Windows packages
         uses: actions/upload-artifact@v4
         with:
-          name: MATRIX-Custumuse-v0.3.0-win-x64
-          path: artifacts/MATRIX-Custumuse-v0.3.0-win-x64.zip
+          name: MATRIX-Custumuse-v0.3.1-windows
+          path: artifacts/MATRIX-Custumuse-v0.3.1-win-*.zip
           if-no-files-found: error
           retention-days: 30
 
       - name: Publish preview release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: custumuse-v0.3.0
+          tag_name: custumuse-v0.3.1
           target_commitish: ${{ github.sha }}
-          name: MATRIX Custumuse v0.3.0 Preview
+          name: MATRIX Custumuse v0.3.1 Preview
           body: |
-            First independent MATRIX Glass Engine experiment.
+            Expanded Windows PC support and proper taskbar diagnostics.
 
-            No TranslucentTB dependency. Custumuse calls the Windows DWM system-backdrop API directly for the Explorer-owned taskbar window. This is experimental because Microsoft does not provide a dedicated public API for third-party taskbar styling. It may be rejected or ignored by some Windows builds.
+            Separate self-contained builds are included for x64, x86 and ARM64. The app includes per-monitor DPI awareness and diagnoses primary/secondary taskbar windows, display identity, and taskbar orientation.
 
-            The effect is reversible: the original backdrop type is saved before applying, and Restore original writes the saved value back. No administrator permission or Explorer injection is used.
-          files: artifacts/MATRIX-Custumuse-v0.3.0-win-x64.zip
+            DWM Desktop Acrylic requests still require Windows 11 build 22621 or later. Applying the DWM system-backdrop attribute to Explorer's taskbar is experimental because Microsoft does not provide a dedicated public taskbar styling API.
+          files: |
+            artifacts/MATRIX-Custumuse-v0.3.1-win-x64.zip
+            artifacts/MATRIX-Custumuse-v0.3.1-win-x86.zip
+            artifacts/MATRIX-Custumuse-v0.3.1-win-arm64.zip
           draft: false
           prerelease: true
           fail_on_unmatched_files: true

@@ -1,27 +1,29 @@
-# MATRIX Custumuse v0.3.0
+# MATRIX Custumuse v0.3.1
 
-The first independent MATRIX Glass Engine experiment for the Windows 11 taskbar.
+A Windows appearance customization app with expanded PC architecture and multi-display diagnostics.
 
-## What's new
-- Removes the TranslucentTB integration entirely.
-- Uses MATRIX's own C# controller to call Windows Desktop Window Manager (DWM) APIs.
-- Detects Explorer taskbar windows: Shell_TrayWnd and Shell_SecondaryTrayWnd.
-- Requests Desktop Acrylic (DWMSBT_TRANSIENTWINDOW) on those taskbar windows.
-- Reads and backs up each taskbar window's original DWM backdrop type before applying.
-- Adds review-before-apply and restore-original flows.
-- Blocks applying when TranslucentTB is running so two taskbar style engines do not compete.
-- No administrator elevation, Explorer injection, DLL patching, system file replacement, or changes to pinned app layout.
+## What's new in v0.3.1
+- The **Run taskbar diagnostics** button now opens a visible report instead of silently updating a small status label.
+- Reports Windows version/build, OS and app architecture, display count, discovered taskbar count, monitor device, taskbar edge/orientation, taskbar bounds, and DWM backdrop read result.
+- Detects the main Windows taskbar and secondary taskbar windows across connected displays.
+- Stable backup mapping by monitor device name, with backward-compatible restore of v0.3.0 backup files.
+- Supports mixed-DPI display layouts through Per-Monitor-V2 DPI awareness.
+- Produces separate self-contained executables for x64, x86, and ARM64 PCs.
+- The app can launch on supported Windows 10 and Windows 11 PCs; true DWM Desktop Acrylic taskbar requests require Windows 11 build 22621 or later.
 
-## Important compatibility note
-Microsoft documents DWMWA_SYSTEMBACKDROP_TYPE (attribute 38) and DWMSBT_TRANSIENTWINDOW (value 3) as Desktop Acrylic on Windows 11 build 22621 and later.
+## Known platform limitation
+Microsoft documents `DWMWA_SYSTEMBACKDROP_TYPE` for application windows and specifies Windows 11 build 22621 as the minimum for the system-backdrop API. Windows does not expose a dedicated supported public API for third-party styling of Explorer's taskbar. Direct DWM requests to the Explorer-owned taskbar are experimental: Windows may reject, ignore, or reset the effect. The diagnostics report the actual HRESULT/read-back result, but successful DWM calls still do not guarantee visible Acrylic on the taskbar.
 
-However, Microsoft does not provide a dedicated supported public API for third-party customization of the Explorer taskbar. Custumuse's direct DWM request against Explorer's taskbar HWND is therefore experimental. Windows may reject it, ignore the visual effect, or reset it during shell updates. The app checks the HRESULT and keeps the original setting for restoration. A successful DWM call does not guarantee every Windows build will visibly render Acrylic on the taskbar.
+The old `DwmEnableBlurBehindWindow` API is not a general Windows 10 taskbar blur fallback; Microsoft notes that it no longer produces the blur effect beginning with Windows 8.
 
-Official API documentation:
-- https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute
-- https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwm_systembackdrop_type
+## Supported build packages
+- Windows x64
+- Windows x86
+- Windows ARM64
 
-## Build
+The app is designed for desktop and multi-monitor PC layouts. It diagnoses horizontal and vertical taskbars when Windows exposes them as standard Explorer taskbar windows.
+
+## Build locally
 Requires .NET 8 SDK on Windows.
 
 ```powershell
@@ -29,7 +31,4 @@ dotnet publish .\MATRIXCustumuse\MATRIXCustumuse.csproj -c Release -r win-x64 --
 ```
 
 ## Safety and restore
-The taskbar effect applies to the current interactive Windows desktop. Custumuse stores its backup at:
-%LOCALAPPDATA%\MATRIX Custumuse\Backups\TaskbarGlassDwm\dwm-taskbar-backup.json
-
-Use **Restore original** to restore the DWM backdrop type captured before applying. If Windows rejects the effect, Custumuse reports the HRESULT and attempts to return already-updated taskbar windows to their original values.
+No administrator elevation is requested. Before applying, Custumuse saves the original DWM backdrop value per monitor. Use **Restore original** to restore currently connected taskbars; backup entries for disconnected monitors are retained until they can be restored.

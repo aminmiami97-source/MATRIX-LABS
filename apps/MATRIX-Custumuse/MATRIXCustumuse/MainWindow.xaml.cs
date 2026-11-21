@@ -52,9 +52,9 @@ public partial class MainWindow : Window
         {
             var version = Environment.OSVersion.Version;
             bool isWindows11 = OperatingSystem.IsWindows() && version.Build >= 22000;
-            OsStatus.Text = isWindows11 ? "Windows 11 detected" : "Windows 11 required";
+            OsStatus.Text = isWindows11 ? "Windows 11 detected" : "Windows 10 / unsupported";
             OsStatus.Foreground = isWindows11 ? Brushes.White : Brushes.Orange;
-            OsVersion.Text = $"Build {version.Build} · {(Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit")}";
+            OsVersion.Text = $"Build {version.Build} · {RuntimeInformation.OSArchitecture}";
 
             bool? transparency = ReadTransparencyPreference();
             TransparencyStatus.Text = transparency switch { true => "Enabled", false => "Disabled", _ => "Unavailable" };
@@ -80,12 +80,14 @@ public partial class MainWindow : Window
 
     private void RefreshTaskbarStatus()
     {
-        TaskbarBuildStatus.Text = $"Windows build: {TaskbarGlassManager.WindowsBuild}";
-        TaskbarEngineStatus.Text = TaskbarGlassManager.GetEngineStatus();
-        TaskbarEngineDetail.Text = TaskbarGlassManager.GetEngineDetail();
-        ApplyTaskbarButton.IsEnabled = TaskbarGlassManager.CanApply;
-        RestoreTaskbarButton.IsEnabled = TaskbarGlassManager.HasBackup && !TaskbarGlassManager.IsElevated;
-        TaskbarBackupStatus.Text = TaskbarGlassManager.HasBackup
+        var diagnostics = TaskbarGlassManager.Diagnose();
+        TaskbarBuildStatus.Text = $"Windows {TaskbarGlassManager.WindowsVersion} · Build {TaskbarGlassManager.WindowsBuild} · OS {TaskbarGlassManager.OSArchitecture} / App {TaskbarGlassManager.ProcessArchitecture}";
+        TaskbarDisplayStatus.Text = $"Displays: {diagnostics.DisplayCount} · Taskbar windows: {diagnostics.TaskbarCount}";
+        TaskbarEngineStatus.Text = diagnostics.Status;
+        TaskbarEngineDetail.Text = diagnostics.Detail;
+        ApplyTaskbarButton.IsEnabled = diagnostics.CanApply;
+        RestoreTaskbarButton.IsEnabled = diagnostics.HasBackup && !TaskbarGlassManager.IsElevated;
+        TaskbarBackupStatus.Text = diagnostics.HasBackup
             ? "Your original DWM backdrop setting is saved and can be restored."
             : "No DWM taskbar backup has been created yet.";
     }
@@ -116,27 +118,33 @@ public partial class MainWindow : Window
         OverviewNavButton.Foreground = taskbarSelected ? normalForeground : Brushes.White;
 
         TaskbarNavButton.Background = taskbarSelected ? selectedBackground : Brushes.Transparent;
-        TaskbarNavButton.BorderBrush = taskbarSelected ? Brushes.Transparent : selectedBorder;
+        TaskbarNavButton.BorderBrush = taskbarSelected ? selectedBorder : Brushes.Transparent;
         TaskbarNavButton.Foreground = taskbarSelected ? Brushes.White : normalForeground;
     }
 
-    private void RefreshTaskbar_Click(object sender, RoutedEventArgs e)
+    private void CheckTaskbar_Click(object sender, RoutedEventArgs e)
     {
+        var diagnostics = TaskbarGlassManager.Diagnose();
         RefreshTaskbarStatus();
-        TaskbarActionStatus.Text = "MATRIX Glass Engine status refreshed.";
+        TaskbarActionStatus.Text = $"Diagnostics complete: {diagnostics.TaskbarCount} taskbar window(s) found across {diagnostics.DisplayCount} display(s).";
+
+        MessageBox.Show(
+            diagnostics.Report,
+            "MATRIX Custumuse · Taskbar diagnostics",
+            MessageBoxButton.OK,
+            diagnostics.CanApply ? MessageBoxImage.Information : MessageBoxImage.Warning);
     }
 
     private void ApplyLiquidGlass_Click(object sender, RoutedEventArgs e)
     {
         const string changePlan =
-            "MATRIX Custumuse will request the Windows Desktop Acrylic backdrop for your taskbar window:\\n\\n" +
-            "1. Read and save the current DWM backdrop setting for the taskbar.\\n" +
-            "2. Request Desktop Acrylic directly from Windows DWM.\\n" +
-            "3. Keep a backup so you can restore the original setting.\\n\\n" +
-            "It will NOT install another taskbar app, edit another app's settings, inject code into Explorer, " +
-            "replace system files, change pinned icons, change icon order, or move your taskbar.\\n\\n" +
-            "This is an experimental use of the documented DWM system-backdrop API on the Explorer-owned taskbar window. " +
-            "Windows may ignore or reset the request on some builds. No administrator permission is needed.\\n\\n" +
+            "MATRIX Custumuse will request the Windows Desktop Acrylic backdrop for each detected taskbar window:\n\n" +
+            "1. Detect the primary and secondary taskbar windows and their monitors.\n" +
+            "2. Read and save each taskbar's current DWM backdrop value.\n" +
+            "3. Request Desktop Acrylic directly through Windows DWM.\n" +
+            "4. Verify whether DWM reports the new backdrop value.\n\n" +
+            "It will NOT install another app, inject code into Explorer, replace system files, or change pinned icons, icon order, or taskbar position. No administrator permission is needed.\n\n" +
+            "This remains experimental because Windows does not provide a dedicated public API for third-party taskbar styling.\n\n" +
             "Apply the MATRIX Glass Engine effect?";
 
         if (MessageBox.Show(changePlan, "Review taskbar changes", MessageBoxButton.YesNo,
@@ -147,6 +155,8 @@ public partial class MainWindow : Window
         {
             TaskbarActionStatus.Text = TaskbarGlassManager.ApplyLiquidGlass();
             RefreshTaskbarStatus();
+            MessageBox.Show(TaskbarActionStatus.Text, "MATRIX Custumuse · Apply result",
+                MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
@@ -160,7 +170,7 @@ public partial class MainWindow : Window
     private void RestoreTaskbar_Click(object sender, RoutedEventArgs e)
     {
         if (MessageBox.Show(
-            "Restore the original DWM backdrop setting captured before the first MATRIX Glass Engine change? The saved backup is kept until Windows confirms the restore.",
+            "Restore the original DWM backdrop setting captured before the first MATRIX Glass Engine change? Backups for currently disconnected monitors will be kept.",
             "Restore original taskbar appearance", MessageBoxButton.YesNo,
             MessageBoxImage.Question) != MessageBoxResult.Yes)
             return;
@@ -169,6 +179,8 @@ public partial class MainWindow : Window
         {
             TaskbarActionStatus.Text = TaskbarGlassManager.RestoreOriginal();
             RefreshTaskbarStatus();
+            MessageBox.Show(TaskbarActionStatus.Text, "MATRIX Custumuse · Restore result",
+                MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
@@ -187,6 +199,6 @@ public partial class MainWindow : Window
 
     private void Preview_Click(object sender, RoutedEventArgs e) => TaskbarGlass_Click(sender, e);
     private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
-    private void Maximize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState;
+    private void Maximize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Maximized ? WindowState.Normal : WindowState;
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
 }

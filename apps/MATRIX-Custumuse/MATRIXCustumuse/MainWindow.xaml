@@ -184,7 +184,7 @@
                             Padding="10,5" Margin="0,0,12,0">
                         <StackPanel Orientation="Horizontal">
                             <Ellipse Width="6" Height="6" Fill="#A98BFF" VerticalAlignment="Center" Margin="0,0,7,0"/>
-                            <TextBlock Text="PREVIEW BUILD 0.3.0" FontSize="9" Foreground="#D7CFFF" FontWeight="SemiBold"/>
+                            <TextBlock Text="PREVIEW BUILD 0.3.1" FontSize="9" Foreground="#D7CFFF" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Border>
                     <Button Style="{StaticResource TitleBarButton}" Content="—" Click="Minimize_Click" Margin="0,0,5,0"/>
@@ -374,7 +374,7 @@
                             </Border>
                         </Grid>
 
-                        <TextBlock Text="MATRIX CUSTUMUSE  ·  WINDOWS 11  ·  PREVIEW 0.3.0"
+                        <TextBlock Text="MATRIX CUSTUMUSE  ·  WINDOWS 11  ·  PREVIEW 0.3.1"
                                    Foreground="#777386" FontSize="9" HorizontalAlignment="Right" Margin="0,18,2,0"/>
                     </StackPanel>
 
@@ -404,12 +404,14 @@
                                     <TextBlock x:Name="TaskbarEngineDetail"
                                                Text="Native Windows DWM control. No third-party taskbar helper is used."
                                                Foreground="#AAA6B8" FontSize="11" TextWrapping="Wrap" MaxWidth="570" Margin="0,5,0,0"/>
-                                    <TextBlock x:Name="TaskbarBuildStatus" Text="Windows 11 build: detecting…"
+                                    <TextBlock x:Name="TaskbarBuildStatus" Text="Windows build: detecting…"
                                                Foreground="#89849A" FontSize="10" Margin="0,9,0,0"/>
+                                    <TextBlock x:Name="TaskbarDisplayStatus" Text="Displays and taskbars: detecting…"
+                                               Foreground="#89849A" FontSize="10" Margin="0,4,0,0"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" MinWidth="170">
-                                    <Button Style="{StaticResource PrimaryButton}" Content="Check taskbar"
-                                            HorizontalContentAlignment="Center" Click="RefreshTaskbar_Click"/>
+                                    <Button Style="{StaticResource PrimaryButton}" Content="Run taskbar diagnostics"
+                                            HorizontalContentAlignment="Center" Click="CheckTaskbar_Click"/>
                                 </StackPanel>
                             </Grid>
                         </Border>
