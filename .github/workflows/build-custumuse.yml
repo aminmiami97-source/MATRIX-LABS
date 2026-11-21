@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - custumuse-v0.1.0
+      - custumuse-adaptive-glass-22000
     paths:
       - "apps/MATRIX-Custumuse/**"
       - ".github/workflows/build-custumuse.yml"
@@ -31,7 +32,7 @@ jobs:
           $targets = @("win-x64", "win-x86", "win-arm64")
           foreach ($rid in $targets) {
             $publishPath = "artifacts/publish/$rid"
-            $zipPath = "artifacts/MATRIX-Custumuse-v0.3.1-$rid.zip"
+            $zipPath = "artifacts/MATRIX-Custumuse-v0.3.2-$rid.zip"
             dotnet publish "apps/MATRIX-Custumuse/MATRIXCustumuse/MATRIXCustumuse.csproj" -c Release -r $rid --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o $publishPath
             if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed for $rid with exit code $LASTEXITCODE" }
             Compress-Archive -Path "$publishPath/*" -DestinationPath $zipPath -CompressionLevel Optimal -Force
@@ -40,27 +41,29 @@ jobs:
       - name: Upload all Windows packages
         uses: actions/upload-artifact@v4
         with:
-          name: MATRIX-Custumuse-v0.3.1-windows
-          path: artifacts/MATRIX-Custumuse-v0.3.1-win-*.zip
+          name: MATRIX-Custumuse-v0.3.2-windows
+          path: artifacts/MATRIX-Custumuse-v0.3.2-win-*.zip
           if-no-files-found: error
           retention-days: 30
 
       - name: Publish preview release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: custumuse-v0.3.1
+          tag_name: custumuse-v0.3.2
           target_commitish: ${{ github.sha }}
-          name: MATRIX Custumuse v0.3.1 Preview
+          name: MATRIX Custumuse v0.3.2 Preview
           body: |
-            Expanded Windows PC support and proper taskbar diagnostics.
+            Adaptive Glass compatibility preview for Windows 11 build 22000 and later.
 
-            Separate self-contained builds are included for x64, x86 and ARM64. The app includes per-monitor DPI awareness and diagnoses primary/secondary taskbar windows, display identity, and taskbar orientation.
+            Windows 11 build 22000 uses the legacy Windows Accent Composition Acrylic policy on detected taskbar windows. Windows 11 build 22621+ retains the DWM system-backdrop request route. Custumuse uses its own implementation and does not install TranslucentTB or inject code into Explorer.
 
-            DWM Desktop Acrylic requests still require Windows 11 build 22621 or later. Applying the DWM system-backdrop attribute to Explorer's taskbar is experimental because Microsoft does not provide a dedicated public taskbar styling API.
+            Both taskbar routes are experimental because Windows does not provide a dedicated supported public API for third-party Explorer taskbar styling. The build-22000 route may be reset by Explorer. Restore returns to Windows-managed default appearance.
+
+            Separate self-contained builds are included for x64, x86 and ARM64, with Per-Monitor-V2 DPI awareness and taskbar diagnostics.
           files: |
-            artifacts/MATRIX-Custumuse-v0.3.1-win-x64.zip
-            artifacts/MATRIX-Custumuse-v0.3.1-win-x86.zip
-            artifacts/MATRIX-Custumuse-v0.3.1-win-arm64.zip
+            artifacts/MATRIX-Custumuse-v0.3.2-win-x64.zip
+            artifacts/MATRIX-Custumuse-v0.3.2-win-x86.zip
+            artifacts/MATRIX-Custumuse-v0.3.2-win-arm64.zip
           draft: false
           prerelease: true
           fail_on_unmatched_files: true
