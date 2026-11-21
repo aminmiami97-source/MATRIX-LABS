@@ -199,6 +199,6 @@ public partial class MainWindow : Window
 
     private void Preview_Click(object sender, RoutedEventArgs e) => TaskbarGlass_Click(sender, e);
     private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
-    private void Maximize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Maximized ? WindowState.Normal : WindowState;
+    private void Maximize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
 }
